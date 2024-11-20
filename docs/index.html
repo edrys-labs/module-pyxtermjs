@@ -475,7 +475,18 @@
           Edrys.sendMessage('join', null)
         } else {
           app.connectUser()
-          Edrys.sendMessage('join', null)
+
+          function join() {
+            setTimeout(() => {
+              if (app.status === null) {
+                console.log('re-joining')
+                Edrys.sendMessage('join', null)
+                join()
+              }
+            }, 1000)
+          }
+
+          join()
         }
       })
 
