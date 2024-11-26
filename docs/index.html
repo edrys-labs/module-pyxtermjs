@@ -322,7 +322,7 @@
             const self = this
 
             Edrys.onMessage(({ from, subject, body }) => {
-              if (from === Edrys.liveUser.name) return
+              //if (from === Edrys.liveUser.name) return
               //console.log('User got new message: ', subject, body)
               switch (subject) {
                 case 'pty-output': {
@@ -386,7 +386,7 @@
 
             if (true) {
               Edrys.onMessage(({ from, subject, body }) => {
-                if (from === Edrys.liveUser.name) return
+                //if (from === Edrys.liveUser.name) return
 
                 // console.log('Got new message: ', from, subject, JSON.stringify(body))
                 switch (subject) {
@@ -457,7 +457,7 @@
       app.initTerminal()
 
       Edrys.onReady(() => {
-        console.log('Module is loaded!')
+        console.log('pyxtermjs is loaded!')
 
         //Edrys.onUpdate((e) =>
         //  console.warn('Something has changed in the class', e)
