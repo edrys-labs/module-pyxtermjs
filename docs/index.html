@@ -430,8 +430,6 @@
               })
 
               Edrys.onMessage(({ from, subject, body, module }) => {
-                // console.log("Got new message: ", from, subject, body, module, Edrys.module.stationConfig?.execute)
-                if (from === Edrys.liveUser.name) return
                 if (
                   subject === (Edrys.module.stationConfig?.execute || 'execute')
                 ) {
