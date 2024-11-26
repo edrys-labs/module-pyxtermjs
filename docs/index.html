@@ -205,7 +205,7 @@
               program += '\n'
             }
 
-            if (Edrys.module)
+            if (true)
               Edrys.sendMessage(
                 'input_' + Edrys.role,
                 program.replace('$CODE', btoa(toUtf8(code)))
@@ -229,7 +229,7 @@
 
             //command += "clear\n"
 
-            if (Edrys.module) Edrys.sendMessage('input_' + Edrys.role, command)
+            if (Edrys.true) Edrys.sendMessage('input_' + Edrys.role, command)
           },
 
           initTerminal() {
@@ -270,7 +270,7 @@
                 socket.emit('pty-input', {
                   input: data,
                 })
-              } else if (Edrys.module) {
+              } else if (true) {
                 // send inputData from subRoles
 
                 tx(data)
@@ -290,7 +290,7 @@
                       socket.emit('pty-input', {
                         input: toPaste,
                       })
-                    } else if (Edrys.module) {
+                    } else if (true) {
                       // send inputData from subRoles
 
                       tx(toPaste)
@@ -360,7 +360,7 @@
             socket.on('pty-output', function (data) {
               // console.log("new output received from server:", data.output);
               terminal.write(data.output)
-              if (Edrys.module) {
+              if (true) {
                 Edrys.sendMessage('pty-output', data.output)
               }
               lastData = data.output
@@ -369,7 +369,7 @@
             socket.on('connect', () => {
               fitToScreen()
               self.status = true
-              if (Edrys.module) {
+              if (true) {
                 Edrys.sendMessage('connect', true)
               }
 
@@ -381,10 +381,10 @@
 
             socket.on('disconnect', () => {
               self.status = false
-              if (Edrys.module) Edrys.sendMessage('connect', false)
+              if (true) Edrys.sendMessage('connect', false)
             })
 
-            if (Edrys.module) {
+            if (true) {
               Edrys.onMessage(({ from, subject, body }) => {
                 if (from === Edrys.liveUser.name) return
 
