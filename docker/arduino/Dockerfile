@@ -12,6 +12,9 @@ RUN DEBIAN_FRONTEND=noninteractive pip3 install \
 COPY serial-plotter.py /usr/bin
 RUN chmod +x /usr/bin/serial-plotter.py
 
+# Update apt repositories before installing packages
+RUN apt-get update
+
 # install arduino-cli dependencies
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
     curl \
