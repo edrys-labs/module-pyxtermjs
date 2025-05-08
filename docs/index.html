@@ -22,6 +22,31 @@
 
     <meta name="show-in" content="station" />
 
+    <meta 
+      name="module-config" 
+      content="{
+        'stationConfig': {
+          'server': {
+            'type': string,
+            'hint': 'Default terminal-server URl (http://localhost:5000/pty)'
+          },
+          'execute': {
+            'type': string,
+            'hint': 'Message subject to execute code (default: execute)'
+          },
+          'script': {
+            'type': text-area,
+            'hint': 'Script to be executed. The code will be replaced by $CODE. (e.g.: echo $CODE | base64 --decode)'
+          },
+          'enable': {
+            'type': checkboxes,
+            'hint': 'Enable student and/or teacher to execute code',
+            'options': ['student', 'teacher'],
+          }
+        },
+      }" 
+    />
+
     <script
       defer
       src="https://edrys-labs.github.io/module/vendor/alpine.min.js"
