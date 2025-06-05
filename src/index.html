@@ -141,9 +141,19 @@
       var fit = null
       var socket = null
       var lastData = null
+      
+      // Add session management
+      var sessionId = null
+      var isProcessingInput = false
+      var inputQueue = []
+      var messageHandlersRegistered = false
 
       const DEFAULT_SERVER = 'http://localhost:5000/pty'
       const DEFAULT_SCRIPT = 'echo $CODE | base64 --decode'
+
+      function generateSessionId() {
+        return Date.now().toString(36) + Math.random().toString(36).substr(2);
+      }
 
       function fitToScreen(dimensions) {
         if (fit && terminal) {
@@ -163,7 +173,7 @@
             socket.emit('resize', dims)
           } else {
             try {
-              Edrys.sendMessage('resize', JSON.stringify(dims))
+              Edrys.sendMessage('resize', dims)
             } catch (e) {}
           }
         }
@@ -178,17 +188,19 @@
         }
       }
 
-      function throttle(cb, delay = 500) {
+      function throttle(cb, delay = 100) {
         let storedChange = ''
-
         let timerID = null
+        let isProcessing = false
 
         function checkStoredArgs() {
-          if (storedChange.length > 0) {
-            cb(storedChange)
+          if (storedChange.length > 0 && !isProcessing) {
+            isProcessing = true
+            const dataToSend = storedChange
             storedChange = ''
+            cb(dataToSend)
+            isProcessing = false
           }
-
           timerID = null
         }
 
@@ -197,7 +209,9 @@
             window.clearTimeout(timerID)
           }
 
-          if (change !== null) storedChange += change
+          if (change !== null && typeof change === 'string') {
+            storedChange += change
+          }
 
           timerID = window.setTimeout(checkStoredArgs, delay)
         }
@@ -219,7 +233,13 @@
         },
         methods: {
           reload() {
-            if (socket) socket.close()
+            if (socket) {
+              socket.removeAllListeners()
+              socket.close()
+            }
+            // Reset session
+            sessionId = generateSessionId()
+            messageHandlersRegistered = false
             this.connectStation()
           },
 
@@ -253,12 +273,16 @@
               )} | base64 --decode > ${toUtf8(name)}\n`
             }
 
-            //command += "clear\n"
-
             if (Edrys.module) Edrys.sendMessage('input_' + Edrys.role, command)
           },
 
           initTerminal() {
+            if (terminal) {
+              terminal.dispose()
+            }
+
+            sessionId = generateSessionId()
+
             terminal = new Terminal({
               cursorBlink: true,
               macOptionIsMeta: true,
@@ -275,8 +299,7 @@
 
             terminal.open(document.getElementById('terminal'))
             fit.fit()
-            terminal.resize(12, 50)
-            // console.log(`size: ${terminal.cols} columns, ${terminal.rows} rows`);
+            terminal.resize(12, Math.round((window.innerHeight - 32) / 18.5))
             fit.fit()
 
             terminal.writeln('Welcome to pyxterm.js!')
@@ -286,20 +309,24 @@
             terminal.writeln('You can paste with ctrl+shift+v')
             terminal.writeln('')
 
+            // Improved throttling with deduplication
             const tx = throttle((data) => {
-              //console.log('send input to station:', data)
-              Edrys.sendMessage('input_' + Edrys.role, data)
-            }, 100)
+              if (!isProcessingInput) {
+                isProcessingInput = true
+                Edrys.sendMessage('input_' + Edrys.role, data)
+                setTimeout(() => {
+                  isProcessingInput = false
+                }, 50)
+              }
+            }, 50)
 
             terminal.onData((data) => {
-              //console.log("key pressed in browser:", data);
-              if (socket) {
+              if (socket && socket.connected) {
                 socket.emit('pty-input', {
                   input: data,
+                  sessionId: sessionId
                 })
               } else if (Edrys.module) {
-                // send inputData from subRoles
-
                 tx(data)
               }
             })
@@ -311,27 +338,18 @@
               if (e.ctrlKey && e.shiftKey) {
                 const key = e.key.toLowerCase()
                 if (key === 'v') {
-                  // ctrl+shift+v: paste whatever is in the clipboard
                   navigator.clipboard.readText().then((toPaste) => {
-                    if (socket) {
+                    if (socket && socket.connected) {
                       socket.emit('pty-input', {
                         input: toPaste,
+                        sessionId: sessionId
                       })
                     } else if (Edrys.module) {
-                      // send inputData from subRoles
-
                       tx(toPaste)
                     }
                   })
                   return false
                 } else if (key === 'c' || key === 'x') {
-                  // ctrl+shift+x: copy whatever is highlighted to clipboard
-
-                  // 'x' is used as an alternate to 'c' because ctrl+c is taken
-                  // by the terminal (SIGINT) and ctrl+shift+c is taken by the browser
-                  // (open devtools).
-                  // I'm not aware of ctrl+shift+x being used by anything in the terminal
-                  // or browser
                   const toCopy = terminal.getSelection()
                   navigator.clipboard.writeText(toCopy)
                   terminal.focus()
@@ -346,19 +364,26 @@
           },
 
           connectUser() {
+            if (messageHandlersRegistered) return
+            messageHandlersRegistered = true
+
             const self = this
 
             Edrys.onMessage(({ from, subject, body }) => {
-              //console.log('User got new message: ', subject, body)
+              // Prevent processing own messages
+              if (from === Edrys.liveUser?.name) return
+              
               switch (subject) {
                 case 'pty-output': {
-                  terminal.write(body)
+                  if (terminal && typeof body === 'string') {
+                    terminal.write(body)
+                  }
                   break
                 }
                 case 'connect': {
-                  if (body === 'true') {
+                  if (body === true) {
                     self.status = true
-                  } else if (body === 'false') {
+                  } else if (body === false) {
                     self.status = false
                   } else {
                     self.status = null
@@ -366,106 +391,112 @@
                   fitToScreen()
                   break
                 }
-                /*default: {
-                      console.warn("unknown message (user) => ", from, subject, body)
-                    }*/
               }
             })
           },
 
           connectStation() {
+            if (messageHandlersRegistered) return
+            messageHandlersRegistered = true
+
+            const self = this
+
             socket = io.connect(this.server, {
-              reconnectionAttempts: Infinity,
+              reconnectionAttempts: 10,
+              timeout: 5000,
+              forceNew: true
             })
 
             socket.on('connect_error', (error) => {
               console.log('Connection error:', error.message)
+              self.status = false
             })
 
-            const self = this
             socket.on('pty-output', function (data) {
-              // console.log("new output received from server:", data.output);
-              terminal.write(data.output)
-              if (Edrys.module) {
-                Edrys.sendMessage('pty-output', data.output)
+              if (terminal && data.output) {
+                terminal.write(data.output)
+                if (Edrys.module) {
+                  Edrys.sendMessage('pty-output', data.output)
+                }
+                lastData = data.output
               }
-              lastData = data.output
             })
 
             socket.on('connect', () => {
+              console.log('Socket connected with session:', sessionId)
               fitToScreen()
               self.status = true
               if (Edrys.module) {
-                Edrys.sendMessage('connect', 'true')
+                Edrys.sendMessage('connect', true)
               }
 
-              // simply an starting enter to receive outputs
+              // Send initial enter to receive outputs
               socket.emit('pty-input', {
                 input: '\n',
+                sessionId: sessionId
               })
             })
 
             socket.on('disconnect', () => {
+              console.log('Socket disconnected')
               self.status = false
-              if (Edrys.module) Edrys.sendMessage('connect', 'false')
+              if (Edrys.module) {
+                Edrys.sendMessage('connect', false)
+              }
             })
 
             if (Edrys.module) {
               Edrys.onMessage(({ from, subject, body }) => {
-                // console.log('Got new message: ', from, subject, JSON.stringify(body))
                 switch (subject) {
                   case 'input_teacher': {
-                    if (self.enable.teacher) {
+                    if (self.enable.teacher && socket && socket.connected) {
                       socket.emit('pty-input', {
                         input: body,
+                        sessionId: sessionId
                       })
                     }
                     break
                   }
                   case 'input_student': {
-                    if (self.enable.student) {
+                    if (self.enable.student && socket && socket.connected) {
                       socket.emit('pty-input', {
                         input: body,
+                        sessionId: sessionId
                       })
                     }
                     break
                   }
                   case 'input_station': {
-                    socket.emit('pty-input', {
-                      input: body,
-                    })
+                    if (socket && socket.connected) {
+                      socket.emit('pty-input', {
+                        input: body,
+                        sessionId: sessionId
+                      })
+                    }
                     break
                   }
                   case 'join': {
-                    Edrys.sendMessage('connect', JSON.stringify(self.status))
-                    Edrys.sendMessage('pty-output', lastData)
+                    Edrys.sendMessage('connect', self.status, from)
+                    if (lastData) {
+                      Edrys.sendMessage('pty-output', lastData, from)
+                    }
                     break
                   }
-
                   case 'resize': {
-                    let data = JSON.parse(body)
-                    fitToScreen(data)
+                    fitToScreen(body)
                     break
                   }
-                  /*default: {
-                        console.warn("unknown message (station) => ", from, subject, body)
-                      }*/
                 }
               })
 
               Edrys.onMessage(({ from, subject, body, module }) => {
-                // console.log("Got new message: ", from, subject, body, module, Edrys.module.stationConfig?.execute)
-
-                if (
-                  subject === (Edrys.module.stationConfig?.execute || 'execute')
-                ) {
+                if (subject === (Edrys.module.stationConfig?.execute || 'execute')) {
                   try {
-                    let data = JSON.parse(body)
+                    let data = body
 
                     if (data.file) {
                       self.store(data.file)
                       self.execute('')
-
                       return
                     }
                   } catch (e) {
@@ -474,7 +505,7 @@
 
                   self.execute(body)
                 }
-              }, (promiscuous = true))
+              }, promiscuous = true)
             }
           },
         },
@@ -485,24 +516,29 @@
       Edrys.onReady(() => {
         console.log('Module is loaded!')
 
-        //Edrys.onUpdate((e) =>
-        //  console.warn('Something has changed in the class', e)
-        //)
-
         if (Edrys.role === 'station') {
           app.isStation = true
           app.server = Edrys.module.stationConfig?.server || DEFAULT_SERVER
           app.script = Edrys.module.stationConfig?.script || DEFAULT_SCRIPT
-          app.enable.student =
-            Edrys.module.stationConfig?.enable?.student || false
-          app.enable.teacher =
-            Edrys.module.stationConfig?.enable?.teacher || false
+          app.enable.student = Edrys.module.stationConfig?.enable?.student || false
+          app.enable.teacher = Edrys.module.stationConfig?.enable?.teacher || false
 
           app.connectStation()
           Edrys.sendMessage('join', null)
         } else {
           app.connectUser()
-          Edrys.sendMessage('join', null)
+
+          function join() {
+            setTimeout(() => {
+              if (app.status === null) {
+                console.log('re-joining')
+                Edrys.sendMessage('join', null)
+                join()
+              }
+            }, 1000)
+          }
+
+          join()
         }
       })
 
