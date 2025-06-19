@@ -7,7 +7,8 @@ USER root
 # This is required to install serial-plotter.py
 RUN DEBIAN_FRONTEND=noninteractive pip3 install \
     plotext \
-    pyserial
+    pyserial \
+    mpremote
 
 COPY serial-plotter.py /usr/bin
 RUN chmod +x /usr/bin/serial-plotter.py
