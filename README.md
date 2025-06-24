@@ -81,14 +81,14 @@ $ docker-compose up
 or directly load our prebuild image from dockerhub:
 
 ``` bash
-$ docker run -it -p 5000:5000 crosslab/edrys_pyxtermjs:latest
+$ docker run -it -p 5000:5000 edryslabs/edrys-pyxtermjs:latest
 ```
 
 However, if you want to build more elaborate docker images, you can have a look at the included Docker- and docker-compose files in [docker](./docker).
 Or, if you want to directly run them, simply use:
 
 ``` bash
-$ docker run -it -p 5000:5000 crosslab/edrys_pyxtermjs_development:latest
+$ docker run -it -p 5000:5000 edryslabs/module-pyxtermjs_development:latest
 ```
 
 to start an entire development server with gcc, java, python, nodejs, etc. installed, or:
@@ -98,7 +98,7 @@ $ docker run -it -p 5000:5000 \
   --device=/dev/ttyACM0:/dev/ttyACM0 \
   --device-cgroup-rule='c 166:* rmv' \
   --device-cgroup-rule='c 189:* rmv' \
-  crosslab/edrys_pyxtermjs_arduino:latest
+  edryslabs/module-pyxtermjs_arduino:latest
 ```
 
 to start a container with arduino support.
@@ -107,6 +107,6 @@ to start a container with arduino support.
 
 You can try out the following classroom/lab configuration for sharing a terminal with your students:
 
-`https://raw.githubusercontent.com/Cross-Lab-Project/edrys_module-pyxtermjs/master/laboratory.yaml`
+`https://raw.githubusercontent.com/edrys-labs/module-pyxtermjs/master/laboratory.yaml`
 
 see the configuration [here](./laboratory.yaml).

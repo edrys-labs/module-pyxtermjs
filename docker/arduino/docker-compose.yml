@@ -1,20 +1,20 @@
-version: '2.4'  # since device_cgroup_rules support was removed in some
-                # newer versions of docker-compose-yaml depending on the
-                # version of docker compose and readded later
-                # see https://github.com/docker/compose/issues/9059
-
+version:
+  '2.4' # since device_cgroup_rules support was removed in some
+  # newer versions of docker-compose-yaml depending on the
+  # version of docker compose and readded later
+  # see https://github.com/docker/compose/issues/9059
 
 services:
   pyxtermjs:
     build: .
-    image: crosslab/edrys_pyxtermjs_arduino:latest
-    container_name: edrys_pyxtermjs_arduino
+    image: edryslabs/module-pyxtermjs_arduino:latest
+    container_name: module-pyxtermjs_arduino
     ports:
-      - "5000:5000"
+      - '5000:5000'
     environment:
       - PYXTERM_CMD=zsh
     devices:
       - /dev/ttyACM0
     device_cgroup_rules:
-      - "c 166:* rmv"
-      - "c 189:* rmv"
+      - 'c 166:* rmv'
+      - 'c 189:* rmv'

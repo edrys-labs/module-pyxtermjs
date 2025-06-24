@@ -14,7 +14,11 @@ def monitor(PORT, BAUD, MAX_LEN):
     while True:
         data = ser.readline()
         if data:
-            decoded_str = data.decode('utf-8')
+            decoded_str
+            try:
+                decoded_str = data.decode('utf-8')
+            except:
+                continue
             pairs = decoded_str.strip().split(',')
             
             try:

@@ -2,7 +2,7 @@ name: Docker Build and Publish
 
 on:
   push:
-    branches: "master"
+    branches: 'master'
 
 jobs:
   build-and-push:
@@ -24,10 +24,26 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push Docker image
+      - name: Build and push Docker image (BASE)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./
+          file: ./Dockerfile
+          push: true
+          tags: edryslabs/module-pyxtermjs:latest
+
+      - name: Build and push Docker image (ARDUINO)
         uses: docker/build-push-action@v5
         with:
           context: ./docker/arduino
           file: ./docker/arduino/Dockerfile
           push: true
-          tags: edryslabs/module-pyxtermjs:latest
+          tags: edryslabs/module-pyxtermjs_arduino:latest
+
+      - name: Build and push Docker image (DEVELOPMENT)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./docker/arduino
+          file: ./docker/development/Dockerfile
+          push: true
+          tags: edryslabs/module-pyxtermjs_development:latest

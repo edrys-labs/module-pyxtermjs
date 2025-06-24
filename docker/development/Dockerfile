@@ -1,4 +1,4 @@
-FROM crosslab/edrys_pyxtermjs:latest
+FROM edryslabs/module-pyxtermjs:latest
 
 # change the user, so that the packages can be installed on top of edrys_pyxtermjs
 USER root
