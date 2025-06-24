@@ -8,7 +8,8 @@ USER root
 RUN DEBIAN_FRONTEND=noninteractive pip3 install \
     plotext \
     pyserial \
-    mpremote
+    mpremote \
+    platformio
 
 COPY serial-plotter.py /usr/bin
 RUN chmod +x /usr/bin/serial-plotter.py
