@@ -1,10 +1,10 @@
-FROM edryslabs/module-pyxtermjs:latest
+FROM edryslabs/module-pyxtermjs:base
 #FROM pyxtermjs
 
 #ensure we are root for software install
 USER root
 
-# This is required to install serial-plotter.py
+# This is required to install serial-plotter.py and other dependencies
 RUN DEBIAN_FRONTEND=noninteractive pip3 install \
     plotext \
     pyserial \

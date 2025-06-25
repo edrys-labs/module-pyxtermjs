@@ -29,7 +29,7 @@ jobs:
           context: ./
           file: ./Dockerfile
           push: true
-          tags: edryslabs/module-pyxtermjs:latest
+          tags: edryslabs/module-pyxtermjs:base
 
   arduino:
     runs-on: ubuntu-latest
@@ -56,7 +56,9 @@ jobs:
           context: ./docker/arduino
           file: ./docker/arduino/Dockerfile
           push: true
-          tags: edryslabs/module-pyxtermjs_arduino:latest
+          tags: |
+            edryslabs/module-pyxtermjs:arduino
+            edryslabs/module-pyxtermjs:latest
 
   development:
     runs-on: ubuntu-latest
@@ -83,4 +85,4 @@ jobs:
           context: ./docker/development
           file: ./docker/development/Dockerfile
           push: true
-          tags: edryslabs/module-pyxtermjs_development:latest
+          tags: edryslabs/module-pyxtermjs:development
