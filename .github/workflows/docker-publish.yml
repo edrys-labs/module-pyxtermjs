@@ -80,7 +80,7 @@ jobs:
       - name: Build and push Docker image (DEVELOPMENT)
         uses: docker/build-push-action@v5
         with:
-          context: ./docker/arduino
+          context: ./docker/development
           file: ./docker/development/Dockerfile
           push: true
           tags: edryslabs/module-pyxtermjs_development:latest
