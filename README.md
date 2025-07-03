@@ -88,7 +88,7 @@ However, if you want to build more elaborate docker images, you can have a look 
 Or, if you want to directly run them, simply use:
 
 ``` bash
-$ docker run -it -p 5000:5000 edryslabs/module-pyxtermjs_development:latest
+$ docker run -it -p 5000:5000 edryslabs/module-pyxtermjs:development
 ```
 
 to start an entire development server with gcc, java, python, nodejs, etc. installed, or:
@@ -98,7 +98,7 @@ $ docker run -it -p 5000:5000 \
   --device=/dev/ttyACM0:/dev/ttyACM0 \
   --device-cgroup-rule='c 166:* rmv' \
   --device-cgroup-rule='c 189:* rmv' \
-  edryslabs/module-pyxtermjs_arduino:latest
+  edryslabs/module-pyxtermjs:arduino
 ```
 
 to start a container with arduino support.
