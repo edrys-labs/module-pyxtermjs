@@ -29,7 +29,9 @@ jobs:
           context: ./
           file: ./Dockerfile
           push: true
-          tags: edryslabs/module-pyxtermjs:base
+          tags: |
+            edryslabs/module-pyxtermjs:base
+            edryslabs/module-pyxtermjs:base-${{ github.run_number }}
 
   arduino:
     runs-on: ubuntu-latest
@@ -50,6 +52,10 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # Wait a moment for base image to be available
+      - name: Wait for base image
+        run: sleep 30
+
       - name: Build and push Docker image (ARDUINO)
         uses: docker/build-push-action@v5
         with:
@@ -57,7 +63,7 @@ jobs:
           file: ./docker/arduino/Dockerfile
           push: true
           tags: |
-            edryslabs/module-pyxtermjs:arduino
+            edryslabs/module-pyxtermjs:arduino-v${{ github.run_number }}
             edryslabs/module-pyxtermjs:latest
 
   development:
@@ -79,10 +85,16 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # Wait a moment for base image to be available
+      - name: Wait for base image
+        run: sleep 30
+
       - name: Build and push Docker image (DEVELOPMENT)
         uses: docker/build-push-action@v5
         with:
           context: ./docker/development
           file: ./docker/development/Dockerfile
           push: true
-          tags: edryslabs/module-pyxtermjs:development
+          tags: |
+            edryslabs/module-pyxtermjs:development-v${{ github.run_number }}
+            edryslabs/module-pyxtermjs:development

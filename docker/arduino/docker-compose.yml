@@ -7,7 +7,7 @@ version:
 services:
   pyxtermjs:
     build: .
-    image: edryslabs/module-pyxtermjs_arduino:latest
+    image: edryslabs/module-pyxtermjs:arduino
     container_name: module-pyxtermjs_arduino
     ports:
       - '5000:5000'
