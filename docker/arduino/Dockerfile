@@ -9,7 +9,8 @@ RUN DEBIAN_FRONTEND=noninteractive pip3 install \
     plotext \
     pyserial \
     mpremote \
-    platformio
+    platformio \
+    pymcuprog
 
 COPY serial-plotter.py /usr/bin
 RUN chmod +x /usr/bin/serial-plotter.py
@@ -17,12 +18,17 @@ RUN chmod +x /usr/bin/serial-plotter.py
 # Update apt repositories before installing packages
 RUN apt-get update
 
-# install arduino-cli dependencies
+# install arduino-cli dependencies and AVR development tools
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
     curl \
     make \
     udev \
-    usbutils
+    usbutils \
+    avr-libc \
+    gcc-avr \
+    binutils-avr \
+    wget \
+    unzip
 
 # prepare arduino-cli for container (install as root)
 RUN cd / && curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
@@ -31,6 +37,14 @@ ARG user=appuser
 
 # add ${user} to dailout group for Arduino device access
 RUN usermod -a -G dialout ${user}
+
+# Download and setup AVR-Dx device pack
+RUN mkdir -p /home/${user}/avr-device-packs && \
+    cd /home/${user}/avr-device-packs && \
+    wget -O AVR-Dx_DFP.2.7.321.atpack https://packs.download.microchip.com/Microchip.AVR-Dx_DFP.2.7.321.atpack && \
+    unzip -q AVR-Dx_DFP.2.7.321.atpack -d AVR-Dx_DFP && \
+    rm AVR-Dx_DFP.2.7.321.atpack && \
+    chown -R ${user}:${user} /home/${user}/avr-device-packs
 
 # Switch to ${user} for arduino-cli setup
 USER ${user}
