@@ -103,6 +103,74 @@ $ docker run -it -p 5000:5000 \
 
 to start a container with arduino support.
 
+### For Windows Users
+
+Windows does not natively support USB device passthrough to Docker containers. However, with WSL2 and the `usbipd-win` tool, we can achieve this functionality.
+
+For this you can use the provided Windows starter script located in `docker/windows-starter/start-pyxtermjs.bat`.
+
+**Requirements:**
+- Windows 10/11 with WSL2 installed
+- Docker Desktop for Windows with WSL2 backend enabled
+- [usbipd-win](https://github.com/dorssel/usbipd-win) tool installed
+
+**Usage:**
+
+1. First, run the script without arguments to see available USB devices:
+   ```cmd
+   start-pyxtermjs.bat
+   ```
+
+2. Identify your device's BUSID from the list and run:
+   ```cmd
+   start-pyxtermjs.bat <BUSID>
+   ```
+   
+   For example:
+   ```cmd
+   start-pyxtermjs.bat 5-1
+   ```
+
+The script will automatically:
+- Bind the USB device (if not already bound)
+- Detach any existing connection
+- Attach the device to WSL
+- Start the Docker container with USB device access
+- Make the terminal available at `http://localhost:5000`
+
+**Note:** The first time you bind a device, you may need to run the command prompt as Administrator.
+
+#### Manual USB Device Attachment
+
+If you prefer to run the commands manually instead of using the batch file:
+
+1. **List available USB devices:**
+   ```cmd
+   usbipd list
+   ```
+
+2. **Bind the device (one-time setup):**
+   ```cmd
+   usbipd bind --busid <BUSID>
+   ```
+
+3. **Attach the device to WSL:**
+   ```cmd
+   usbipd attach --wsl --busid <BUSID>
+   ```
+
+4. **Start the Docker container:**
+   ```cmd
+   wsl -e bash -c "docker run -it -p 5000:5000 --device=/dev/ttyACM0:/dev/ttyACM0 edryslabs/module-pyxtermjs:latest"
+   ```
+
+5. **When finished, detach the device:**
+   ```cmd
+   usbipd detach --busid <BUSID>
+   ```
+
+Replace `<BUSID>` with your actual device's bus ID (e.g., `5-1`).
+
 ## Edrys - Classroom
 
 You can try out the following classroom/lab configuration for sharing a terminal with your students:
