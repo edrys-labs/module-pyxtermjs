@@ -9,6 +9,9 @@ def monitor(PORT, BAUD, MAX_LEN):
     plt.xlim(0, MAX_LEN)
     ser = serial.Serial(PORT, BAUD)
     
+    update_counter = 0
+    update_interval = 10  # Update plot every 10 data points
+    
     while True:
         data = ser.readline()
         if data:
@@ -28,12 +31,15 @@ def monitor(PORT, BAUD, MAX_LEN):
                         sensor_data[key].pop(0)
             except:
                 pass
-                
-            plt.clear_terminal()
-            plt.clear_data()
-            for key in sensor_data.keys():
-                plt.plot(sensor_data[key], label=key)
-            plt.show()
+            
+            update_counter += 1
+            if update_counter >= update_interval:
+                update_counter = 0
+                plt.clear_terminal()
+                plt.clear_data()
+                for key in sensor_data.keys():
+                    plt.plot(sensor_data[key], label=key)
+                plt.show()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
