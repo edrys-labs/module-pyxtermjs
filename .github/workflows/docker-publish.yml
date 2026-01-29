@@ -31,7 +31,9 @@ jobs:
           context: ./
           file: ./Dockerfile
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
+          cache-from: type=registry,ref=edryslabs/module-pyxtermjs:base-cache
+          cache-to: type=registry,ref=edryslabs/module-pyxtermjs:base-cache,mode=max
           tags: |
             edryslabs/module-pyxtermjs:base
             edryslabs/module-pyxtermjs:base-${{ github.run_number }}
@@ -60,7 +62,9 @@ jobs:
           context: ./docker/arduino
           file: ./docker/arduino/Dockerfile
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
+          cache-from: type=registry,ref=edryslabs/module-pyxtermjs:arduino-cache
+          cache-to: type=registry,ref=edryslabs/module-pyxtermjs:arduino-cache,mode=max
           tags: |
             edryslabs/module-pyxtermjs:arduino-v${{ github.run_number }}
             edryslabs/module-pyxtermjs:latest
@@ -89,7 +93,9 @@ jobs:
           context: ./docker/development
           file: ./docker/development/Dockerfile
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
+          cache-from: type=registry,ref=edryslabs/module-pyxtermjs:development-cache
+          cache-to: type=registry,ref=edryslabs/module-pyxtermjs:development-cache,mode=max
           tags: |
             edryslabs/module-pyxtermjs:development-v${{ github.run_number }}
             edryslabs/module-pyxtermjs:development
