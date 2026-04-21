@@ -1,4 +1,30 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Python Terminal-Server</title><meta name="description" content="This is a terminal-server based on <a href='https://github.com/cs01/pyxtermjs' target='_blank'>pyxtermjs</a>. A server should be started locally and shared in station mode. For more information and configuration options, see <br><a href='https://github.com/edrys-labs/module-pyxtermjs' target='_blank'>edrys-labs/module-pyxtermjs</a>"><style>html{font-family:arial}</style><link rel="stylesheet" href="https://unpkg.com/xterm@4.11.0/css/xterm.css"><meta name="show-in" content="station"><meta name="module-config" content="{
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Python Terminal-Server</title>
+
+    <meta
+      name="description"
+      content="This is a terminal-server based on <a href='https://github.com/cs01/pyxtermjs' target='_blank'>pyxtermjs</a>. A server should be started locally and shared in station mode. For more information and configuration options, see <br><a href='https://github.com/edrys-labs/module-pyxtermjs' target='_blank'>edrys-labs/module-pyxtermjs</a>"
+    />
+
+    <style>
+      html {
+        font-family: arial;
+      }
+    </style>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/xterm@4.11.0/css/xterm.css"
+    />
+
+    <meta name="show-in" content="station" />
+
+    <meta 
+      name="module-config" 
+      content="{
         'stationConfig': {
           'server': {
             'type': string,
@@ -18,7 +44,519 @@
             'options': ['student', 'teacher'],
           }
         },
-      }"><script defer src="https://edrys-org.github.io/edrys/module/vendor/alpine.min.js"></script><link rel="stylesheet" href="https://edrys-org.github.io/edrys/module/vendor/water.min.css"><link rel="stylesheet" href="https://edrys-org.github.io/edrys/module/vendor/open-iconic/css/open-iconic.min.css"><script src="https://edrys-org.github.io/edrys/module/edrys.js"></script><script src="https://unpkg.com/vue@3"></script></head><body style="max-width:100%;margin-bottom:0;padding-left:0"> <div id="app"> <span style="margin-left:2rem;font-size:small"> status: <span v-if="status === false" style="background-color:#ff8383">disconnected</span> <span v-if="status === null">connecting ...</span> <span v-if="status === true" style="background-color:#90ee90">connected</span> </span> <span style="float:right;align-items:center;font-size:small;display:flex" v-if="isStation"> <label> student: <input type="checkbox" v-model="enable.student"> </label> <label> teacher: <input type="checkbox" v-model="enable.teacher"> </label> <input type="input" style="display:inline-flex" v-model="server"> <button style="margin-right:0;display:inline-flex" @click="reload()"> reload </button> </span> <textarea style="height:4.25rem" v-model="script" v-if="isStation">
+      }" 
+    />
+
+    <script
+      defer
+      src="https://edrys-labs.github.io/module/vendor/alpine.min.js"
+    ></script>
+    <link
+      rel="stylesheet"
+      href="https://edrys-labs.github.io/module/vendor/water.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://edrys-labs.github.io/module/vendor/open-iconic/css/open-iconic.min.css"
+    />
+    <script src="https://edrys-labs.github.io/module/edrys.js"></script>
+    <script src="https://unpkg.com/vue@3"></script>
+  </head>
+
+  <body style="max-width: 100%; padding-left: 0px; margin-bottom: 0px">
+    <div id="app">
+      <span style="font-size: 1.4em">pyxterm.js</span>
+      <span style="font-size: small; margin-left: 2rem">
+        status:
+        <span v-if="status === false" style="background-color: #ff8383"
+          >disconnected</span
+        >
+        <span v-if="status === null">connecting ...</span>
+        <span v-if="status === true" style="background-color: lightgreen"
+          >connected</span
+        >
+      </span>
+
+      <span
+        style="
+          font-size: small;
+          display: flex;
+          align-items: center;
+          float: right;
+        "
+        v-if="isStation"
+      >
+        <label>
+          student: <input type="checkbox" v-model="enable.student" />
+        </label>
+        <label>
+          teacher: <input type="checkbox" v-model="enable.teacher" />
+        </label>
+        <input type="input" style="display: inline-flex" v-model="server" />
+        <button
+          style="display: inline-flex; margin-right: 0px"
+          @click="reload()"
+        >
+          reload
+        </button>
+      </span>
+
+      <textarea style="height: 4.25rem" v-model="script" v-if="isStation">
         {{script}}
-      </textarea> </div> <div style="width:calc(100% + 10px)" id="terminal"></div>  <script src="index.302fc86c.js"></script> <script src="index.a8d293b9.js"></script> <script src="index.cc94d01e.js"></script> <script src="index.09b6c50e.js"></script> <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script> <script type="module">var e=function(e){for(var t=encodeURIComponent(e),n="",s=0;s<t.length;){var o=t[s];if(s+=1,"%"==o){var i=t.substring(s,s+=2);i&&(n+=String.fromCharCode(parseInt(i,16)))}else n+=o}return n};const{createApp:t}=Vue;var n=null,s=null,o=null,i=null,r=null,c=!1,d=!1;const u="http://localhost:5000/pty",l="echo $CODE | base64 --decode";function a(){return Date.now().toString(36)+Math.random().toString(36).substr(2)}function p(e){if(s&&n){s.fit();let t={cols:n.cols,rows:n.rows};if(e?.cols&&e?.rows&&(t=e),o)o.emit("resize",t);else try{Edrys.sendMessage("resize",t)}catch(e){}}}const y=t({data:()=>({status:null,isStation:!1,connected:!1,enable:{student:!1,teacher:!1},server:u,script:l}),methods:{reload(){o&&(o.removeAllListeners(),o.close()),r=a(),d=!1,this.connectStation()},execute(t){let n="\x03\x03\n"+this.script;n.endsWith("\n")||(n+="\n"),Edrys.module&&Edrys.sendMessage("input_"+Edrys.role,n.replace("$CODE",btoa(e(t))))},store(t){let n="";for(let s in t){let o=t[s];o.endsWith("\n")||(o+="\n"),n+=`echo ${btoa(e(o))} | base64 --decode > ${e(s)}
-`}Edrys.module&&Edrys.sendMessage("input_"+Edrys.role,n)},initTerminal(){let e;n&&n.dispose(),r=a(),(n=new Terminal({cursorBlink:!0,macOptionIsMeta:!0,scrollback:1e4})).attachCustomKeyEventHandler(function(e){if("keydown"!==e.type)return!0;if(e.ctrlKey&&e.shiftKey){let s=e.key.toLowerCase();if("v"===s)return navigator.clipboard.readText().then(e=>{o&&o.connected?o.emit("pty-input",{input:e,sessionId:r}):Edrys.module&&t(e)}),!1;if("c"===s||"x"===s){let e=n.getSelection();return navigator.clipboard.writeText(e),n.focus(),!1}}return!0}),s=new FitAddon.FitAddon,n.loadAddon(s),n.loadAddon(new WebLinksAddon.WebLinksAddon),n.loadAddon(new SearchAddon.SearchAddon),n.open(document.getElementById("terminal")),s.fit(),n.resize(12,Math.round((window.innerHeight-32)/18.5)),s.fit(),n.writeln("Welcome to pyxterm.js!"),n.writeln("https://github.com/cs01/pyxterm.js"),n.writeln(""),n.writeln("You can copy with ctrl+shift+x"),n.writeln("You can paste with ctrl+shift+v"),n.writeln("");let t=function(e,t=100){let n="",s=null,o=!1;function i(){if(n.length>0&&!o){o=!0;let t=n;n="",e(t),o=!1}s=null}return e=>{s&&window.clearTimeout(s),null!==e&&"string"==typeof e&&(n+=e),s=window.setTimeout(i,t)}}(e=>{c||(c=!0,Edrys.sendMessage("input_"+Edrys.role,e),setTimeout(()=>{c=!1},50))},50);n.onData(e=>{o&&o.connected?o.emit("pty-input",{input:e,sessionId:r}):Edrys.module&&t(e)}),window.onresize=function(...t){let n=this;clearTimeout(e),e=setTimeout(()=>p.apply(n,t),50)}},connectUser(){if(d)return;d=!0;let e=this;Edrys.onMessage(({from:t,subject:s,body:o})=>{if(t!==Edrys.liveUser?.name)switch(s){case"pty-output":n&&"string"==typeof o&&n.write(o);break;case"connect":!0===o?e.status=!0:!1===o?e.status=!1:e.status=null,p()}})},connectStation(){if(d)return;d=!0;let e=this;(o=io.connect(this.server,{reconnectionAttempts:10,timeout:5e3,forceNew:!0})).on("connect_error",t=>{console.log("Connection error:",t.message),e.status=!1}),o.on("pty-output",function(e){n&&e.output&&(n.write(e.output),Edrys.module&&Edrys.sendMessage("pty-output",e.output),i=e.output)}),o.on("connect",()=>{console.log("Socket connected with session:",r),p(),e.status=!0,Edrys.module&&Edrys.sendMessage("connect",!0),o.emit("pty-input",{input:"\n",sessionId:r})}),o.on("disconnect",()=>{console.log("Socket disconnected"),e.status=!1,Edrys.module&&Edrys.sendMessage("connect",!1)}),Edrys.module&&(Edrys.onMessage(({from:t,subject:n,body:s})=>{switch(n){case"input_teacher":e.enable.teacher&&o&&o.connected&&o.emit("pty-input",{input:s,sessionId:r});break;case"input_student":e.enable.student&&o&&o.connected&&o.emit("pty-input",{input:s,sessionId:r});break;case"input_station":o&&o.connected&&o.emit("pty-input",{input:s,sessionId:r});break;case"join":Edrys.sendMessage("connect",e.status,t),i&&Edrys.sendMessage("pty-output",i,t);break;case"resize":p(s)}}),Edrys.onMessage(({from:t,subject:n,body:s,module:o})=>{if(n===(Edrys.module.stationConfig?.execute||"execute")){try{if(s.file){e.store(s.file),e.execute("");return}}catch(e){console.warn("Error, could not execute command:",e.message)}e.execute(s)}},promiscuous=!0))}}}).mount("#app");y.initTerminal(),Edrys.onReady(()=>{(console.log("Module is loaded!"),"station"===Edrys.role)?(y.isStation=!0,y.server=Edrys.module.stationConfig?.server||u,y.script=Edrys.module.stationConfig?.script||l,y.enable.student=Edrys.module.stationConfig?.enable?.student||!1,y.enable.teacher=Edrys.module.stationConfig?.enable?.teacher||!1,y.connectStation(),Edrys.sendMessage("join",null)):(y.connectUser(),function e(){setTimeout(()=>{null===y.status&&(console.log("re-joining"),Edrys.sendMessage("join",null),e())},1e3)}())}),setTimeout(function(){Edrys.module||(console.warn("connect"),y.connectStation())},5e3);</script> </body></html>
+      </textarea>
+    </div>
+
+    <div style="width: calc(100% + 10px); height: inherit" id="terminal"></div>
+
+    <!-- xterm -->
+    <script src="https://unpkg.com/xterm@4.11.0/lib/xterm.js"></script>
+    <script src="https://unpkg.com/xterm-addon-fit@0.5.0/lib/xterm-addon-fit.js"></script>
+    <script src="https://unpkg.com/xterm-addon-web-links@0.4.0/lib/xterm-addon-web-links.js"></script>
+    <script src="https://unpkg.com/xterm-addon-search@0.8.0/lib/xterm-addon-search.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
+
+    <script>
+      var toUtf8 = function (text) {
+        var surrogate = encodeURIComponent(text)
+        var result = ''
+        for (var i = 0; i < surrogate.length; ) {
+          var character = surrogate[i]
+          i += 1
+          if (character == '%') {
+            var hex = surrogate.substring(i, (i += 2))
+            if (hex) {
+              result += String.fromCharCode(parseInt(hex, 16))
+            }
+          } else {
+            result += character
+          }
+        }
+        return result
+      }
+
+      const { createApp } = Vue
+
+      var terminal = null
+      var fit = null
+      var socket = null
+      var lastData = null
+      
+      // Add session management
+      var sessionId = null
+      var isProcessingInput = false
+      var inputQueue = []
+      var messageHandlersRegistered = false
+
+      const DEFAULT_SERVER = 'http://localhost:5000/pty'
+      const DEFAULT_SCRIPT = 'echo $CODE | base64 --decode'
+
+      function generateSessionId() {
+        return Date.now().toString(36) + Math.random().toString(36).substr(2);
+      }
+
+      function fitToScreen(dimensions) {
+        if (fit && terminal) {
+          fit.fit()
+
+          let dims = {
+            cols: terminal.cols,
+            rows: terminal.rows,
+          }
+
+          if (dimensions?.cols && dimensions?.rows) {
+            dims = dimensions
+          }
+
+          // console.log("sending new dimensions to server's pty", dims);
+          if (socket) {
+            socket.emit('resize', dims)
+          } else {
+            try {
+              Edrys.sendMessage('resize', dims)
+            } catch (e) {}
+          }
+        }
+      }
+
+      function debounce(func, wait_ms) {
+        let timeout
+        return function (...args) {
+          const context = this
+          clearTimeout(timeout)
+          timeout = setTimeout(() => func.apply(context, args), wait_ms)
+        }
+      }
+
+      function throttle(cb, delay = 100) {
+        let storedChange = ''
+        let timerID = null
+        let isProcessing = false
+
+        function checkStoredArgs() {
+          if (storedChange.length > 0 && !isProcessing) {
+            isProcessing = true
+            const dataToSend = storedChange
+            storedChange = ''
+            cb(dataToSend)
+            isProcessing = false
+          }
+          timerID = null
+        }
+
+        return (change) => {
+          if (timerID) {
+            window.clearTimeout(timerID)
+          }
+
+          if (change !== null && typeof change === 'string') {
+            storedChange += change
+          }
+
+          timerID = window.setTimeout(checkStoredArgs, delay)
+        }
+      }
+
+      const app = createApp({
+        data() {
+          return {
+            status: null,
+            isStation: false,
+            connected: false,
+            enable: {
+              student: false,
+              teacher: false,
+            },
+            server: DEFAULT_SERVER,
+            script: DEFAULT_SCRIPT,
+          }
+        },
+        methods: {
+          reload() {
+            if (socket) {
+              socket.removeAllListeners()
+              socket.close()
+            }
+            // Reset session
+            sessionId = generateSessionId()
+            messageHandlersRegistered = false
+            this.connectStation()
+          },
+
+          execute(code) {
+            // add two time ctrl+c to stop a possible execution
+            let program = '\u0003\u0003\n' + this.script
+
+            if (!program.endsWith('\n')) {
+              program += '\n'
+            }
+
+            if (typeof Edrys !== 'undefined') {
+              Edrys.sendMessage(
+                'input_' + Edrys.role,
+                program.replace('$CODE', btoa(toUtf8(code)))
+              )
+            }
+          },
+
+          store(file) {
+            let command = ''
+
+            for (const name in file) {
+              let content = file[name]
+
+              if (!content.endsWith('\n')) {
+                content += '\n'
+              }
+
+              command += `echo ${btoa(
+                toUtf8(content)
+              )} | base64 --decode > ${toUtf8(name)}\n`
+            }
+
+            if (typeof Edrys !== 'undefined') {
+              Edrys.sendMessage('input_' + Edrys.role, command)
+            }
+          },
+
+          initTerminal() {
+            if (terminal) {
+              terminal.dispose()
+            }
+
+            sessionId = generateSessionId()
+
+            terminal = new Terminal({
+              cursorBlink: true,
+              macOptionIsMeta: true,
+              scrollback: 10000,
+            })
+
+            // https://github.com/xtermjs/xterm.js/issues/2941
+            terminal.attachCustomKeyEventHandler(customKeyEventHandler)
+
+            fit = new FitAddon.FitAddon()
+            terminal.loadAddon(fit)
+            terminal.loadAddon(new WebLinksAddon.WebLinksAddon())
+            terminal.loadAddon(new SearchAddon.SearchAddon())
+
+            terminal.open(document.getElementById('terminal'))
+            fit.fit()
+            terminal.resize(12, Math.round((window.innerHeight - 32) / 18.5))
+            fit.fit()
+            terminal.writeln('Welcome to pyxterm.js!')
+            terminal.writeln('https://github.com/cs01/pyxterm.js')
+            terminal.writeln('')
+            terminal.writeln('You can copy with ctrl+shift+x')
+            terminal.writeln('You can paste with ctrl+shift+v')
+            terminal.writeln('')
+
+            // Improved throttling with deduplication
+            const tx = throttle((data) => {
+              if (typeof Edrys !== 'undefined' && !isProcessingInput) {
+                isProcessingInput = true
+                Edrys.sendMessage('input_' + Edrys.role, data)
+                setTimeout(() => {
+                  isProcessingInput = false
+                }, 50)
+              }
+            }, 50)
+
+            terminal.onData((data) => {
+              if (socket && socket.connected) {
+                socket.emit('pty-input', {
+                  input: data,
+                  sessionId: sessionId
+                })
+              } else if (typeof Edrys !== 'undefined') {
+                tx(data)
+              }
+            })
+
+            function customKeyEventHandler(e) {
+              if (e.type !== 'keydown') {
+                return true
+              }
+              if (e.ctrlKey && e.shiftKey) {
+                const key = e.key.toLowerCase()
+                if (key === 'v') {
+                  navigator.clipboard.readText().then((toPaste) => {
+                    if (socket && socket.connected) {
+                      socket.emit('pty-input', {
+                        input: toPaste,
+                        sessionId: sessionId
+                      })
+                    } else if (typeof Edrys !== 'undefined') {
+                      tx(toPaste)
+                    }
+                  })
+                  return false
+                } else if (key === 'c' || key === 'x') {
+                  const toCopy = terminal.getSelection()
+                  navigator.clipboard.writeText(toCopy)
+                  terminal.focus()
+                  return false
+                }
+              }
+              return true
+            }
+
+            const wait_ms = 50
+            window.onresize = debounce(fitToScreen, wait_ms)
+          },
+
+          connectUser() {
+            if (messageHandlersRegistered) return
+            messageHandlersRegistered = true
+
+            const self = this
+
+            if (typeof Edrys !== 'undefined') {
+              Edrys.onMessage(({ from, subject, body }) => {
+                // Prevent processing own messages
+                if (from === Edrys.liveUser?.name) return
+                
+                switch (subject) {
+                  case 'pty-output': {
+                    if (terminal && typeof body === 'string') {
+                      terminal.write(body)
+                    }
+                    break
+                  }
+                  case 'connect': {
+                    if (body === true) {
+                      self.status = true
+                    } else if (body === false) {
+                      self.status = false
+                    } else {
+                      self.status = null
+                    }
+                    fitToScreen()
+                    break
+                  }
+                }
+              })
+            }
+          },
+
+          connectStation() {
+            if (messageHandlersRegistered) return
+            messageHandlersRegistered = true
+
+            const self = this
+
+            socket = io.connect(this.server, {
+              reconnectionAttempts: 10,
+              timeout: 5000,
+              forceNew: true
+            })
+
+            socket.on('connect_error', (error) => {
+              console.log('Connection error:', error.message)
+              self.status = false
+            })
+
+            socket.on('pty-output', function (data) {
+              if (terminal && data.output) {
+                terminal.write(data.output)
+                if (typeof Edrys !== 'undefined') {
+                  Edrys.sendMessage('pty-output', data.output)
+                }
+                lastData = data.output
+              }
+            })
+
+            socket.on('connect', () => {
+              console.log('Socket connected with session:', sessionId)
+              fitToScreen()
+              self.status = true
+              if (typeof Edrys !== 'undefined') {
+                Edrys.sendMessage('connect', true)
+              }
+
+              // Send initial enter to receive outputs
+              socket.emit('pty-input', {
+                input: '\n',
+                sessionId: sessionId
+              })
+            })
+
+            socket.on('disconnect', () => {
+              console.log('Socket disconnected')
+              self.status = false
+              if (typeof Edrys !== 'undefined') {
+                Edrys.sendMessage('connect', false)
+              }
+            })
+
+            if (typeof Edrys !== 'undefined') {
+              Edrys.onMessage(({ from, subject, body }) => {
+                switch (subject) {
+                  case 'input_teacher': {
+                    if (self.enable.teacher && socket && socket.connected) {
+                      socket.emit('pty-input', {
+                        input: body,
+                        sessionId: sessionId
+                      })
+                    }
+                    break
+                  }
+                  case 'input_student': {
+                    if (self.enable.student && socket && socket.connected) {
+                      socket.emit('pty-input', {
+                        input: body,
+                        sessionId: sessionId
+                      })
+                    }
+                    break
+                  }
+                  case 'input_station': {
+                    if (socket && socket.connected) {
+                      socket.emit('pty-input', {
+                        input: body,
+                        sessionId: sessionId
+                      })
+                    }
+                    break
+                  }
+                  case 'join': {
+                    if (typeof Edrys !== 'undefined') {
+                      Edrys.sendMessage('connect', self.status, from)
+                      if (lastData) {
+                        Edrys.sendMessage('pty-output', lastData, from)
+                      }
+                    }
+                    break
+                  }
+                  case 'resize': {
+                    fitToScreen(body)
+                    break
+                  }
+                }
+              })
+
+              Edrys.onMessage(({ from, subject, body, module }) => {
+                if (subject === (Edrys.module?.stationConfig?.execute || 'execute')) {
+                  try {
+                    let data = body
+
+                    if (data.file) {
+                      self.store(data.file)
+                      self.execute('')
+                      return
+                    }
+                  } catch (e) {
+                    console.warn('Error, could not execute command:', e.message)
+                  }
+
+                  self.execute(body)
+                }
+              }, promiscuous = true)
+            }
+          },
+        },
+      }).mount('#app')
+
+      app.initTerminal()
+
+      // Initialize when Edrys is ready
+      if (typeof Edrys !== 'undefined') {
+        Edrys.onReady(() => {
+          console.log('pyxtermjs is loaded!')
+
+          if (Edrys.role === 'station') {
+            app.isStation = true
+            app.server = Edrys.module?.stationConfig?.server || DEFAULT_SERVER
+            app.script = Edrys.module?.stationConfig?.script || DEFAULT_SCRIPT
+            app.enable.student = Edrys.module?.stationConfig?.enable?.student || false
+            app.enable.teacher = Edrys.module?.stationConfig?.enable?.teacher || false
+
+            app.connectStation()
+            Edrys.sendMessage('join', null)
+          } else {
+            app.connectUser()
+
+            function join() {
+              setTimeout(() => {
+                if (app.status === null) {
+                  console.log('re-joining')
+                  Edrys.sendMessage('join', null)
+                  join()
+                }
+              }, 1000)
+            }
+
+            join()
+          }
+        })
+      }
+
+      // Fallback initialization
+      setTimeout(function () {
+        if (typeof Edrys === 'undefined' || !Edrys.module) {
+          console.warn('Edrys not available, connecting directly')
+          app.connectStation()
+        }
+      }, 5000)
+    </script>
+  </body>
+</html>
