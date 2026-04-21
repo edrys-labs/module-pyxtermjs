@@ -9,39 +9,39 @@ meta:
     This classroom provides base implementation for running a terminal-server on
     Ubuntu 22.04. Make sure that one participant shares a pytermjs session
     directly or from a docker file as described <a
-    href="https://github.com/Cross-Lab-Project/edrys_module-pyxtermjs">here</a>
+    href="https://github.com/edrys-labs/module-pyxtermjs">here</a>
     or run:
 
     <br><br>
 
     <code style="margin-bottom: 5px">docker run -it -p 5000:5000
-    crosslab/edrys_pyxtermjs</code>
+    edryslabs/module-pyxtermjs</code>
 
     <hr>
 
     <code>docker run -it -p 5000:5000
-    crosslab/edrys_pyxtermjs_development</code>
+    edryslabs/module-pyxtermjs:development</code>
 
     <hr>
 
     <code>docker run -it -p 5000:5000
     --device=/dev/ttyACM0:/dev/ttyACM0 --device-cgroup-rule='c 166:* rmv'
     --device-cgroup-rule='c 189:* rmv'
-    crosslab/edrys_pyxtermjs_arduino </code>
+    edryslabs/module-pyxtermjs:arduino</code>
   selfAssign: true
   defaultNumberOfRooms: 0
 members:
   teacher: []
   student: []
 modules:
-  - url: https://cross-lab-project.github.io/edrys_module-markdown-it/index.html
+  - url: https://edrys-labs.github.io/module-markdown-it/index.html
     config: >
       # Welcome to the Edrys - PyTermJS
 
 
       With the help of the edrys module
 
-      [PyTermJS](https://github.com/Cross-Lab-Project/edrys_module-pyxtermjs)
+      [PyTermJS](https://github.com/edrys-labs/module-pyxtermjs)
 
       it is possible to share a terminal-session for different purposes with
       your peers.
@@ -56,7 +56,7 @@ modules:
 
       ``` bash
 
-      $ docker run -it -p 5000:5000 crosslab/edrys_pyxtermjs
+      $ docker run -it -p 5000:5000 edryslabs/module-pyxtermjs
 
       ```
 
@@ -69,7 +69,7 @@ modules:
 
       ``` bash
 
-      $ docker run -it -p 5000:5000 crosslab/edrys_pyxtermjs_development
+      $ docker run -it -p 5000:5000 edryslabs/module-pyxtermjs:development
 
       ```
 
@@ -85,7 +85,7 @@ modules:
 
       For more information checkout the
 
-      [Dockerfile](https://github.com/Cross-Lab-Project/edrys_module-pyxtermjs/blob/master/docker/arduino/Dockerfile).
+      [Dockerfile](https://github.com/edrys-labs/module-pyxtermjs/blob/master/docker/arduino/Dockerfile).
 
 
       ``` bash
@@ -93,7 +93,7 @@ modules:
           --device=/dev/ttyACM0:/dev/ttyACM0 \
           --device-cgroup-rule='c 166:* rmv' \
           --device-cgroup-rule='c 189:* rmv' \
-          crosslab/edrys_pyxtermjs_arduino
+          edryslabs/module-pyxtermjs:arduino
       ```
 
 
@@ -134,7 +134,7 @@ modules:
     showInCustom: lobby
     width: full
     height: huge
-  - url: https://cross-lab-project.github.io/edrys_module-pyxtermjs/index.html
+  - url: https://edrys-labs.github.io/module-pyxtermjs/index.html
     config: ''
     studentConfig: ''
     teacherConfig: ''
