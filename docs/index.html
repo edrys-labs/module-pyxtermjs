@@ -251,8 +251,9 @@
             }
 
             if (typeof Edrys !== 'undefined') {
+              const executeCmd = Edrys.module?.stationConfig?.execute || 'execute'
               Edrys.sendMessage(
-                'input_' + Edrys.role,
+                'input_' + Edrys.role + '_' + executeCmd,
                 program.replace('$CODE', btoa(toUtf8(code)))
               )
             }
@@ -274,7 +275,8 @@
             }
 
             if (typeof Edrys !== 'undefined') {
-              Edrys.sendMessage('input_' + Edrys.role, command)
+              const executeCmd = Edrys.module?.stationConfig?.execute || 'execute'
+              Edrys.sendMessage('input_' + Edrys.role + '_' + executeCmd, command)
             }
           },
 
@@ -314,7 +316,8 @@
             const tx = throttle((data) => {
               if (typeof Edrys !== 'undefined' && !isProcessingInput) {
                 isProcessingInput = true
-                Edrys.sendMessage('input_' + Edrys.role, data)
+                const executeCmd = Edrys.module?.stationConfig?.execute || 'execute'
+                Edrys.sendMessage('input_' + Edrys.role + '_' + executeCmd, data)
                 setTimeout(() => {
                   isProcessingInput = false
                 }, 50)
@@ -374,25 +377,22 @@
               Edrys.onMessage(({ from, subject, body }) => {
                 // Prevent processing own messages
                 if (from === Edrys.liveUser?.name) return
-                
-                switch (subject) {
-                  case 'pty-output': {
-                    if (terminal && typeof body === 'string') {
-                      terminal.write(body)
-                    }
-                    break
+
+                const executeCmd = Edrys.module?.stationConfig?.execute || 'execute'
+
+                if (subject === 'pty-output_' + executeCmd) {
+                  if (terminal && typeof body === 'string') {
+                    terminal.write(body)
                   }
-                  case 'connect': {
-                    if (body === true) {
-                      self.status = true
-                    } else if (body === false) {
-                      self.status = false
-                    } else {
-                      self.status = null
-                    }
-                    fitToScreen()
-                    break
+                } else if (subject === 'connect_' + executeCmd) {
+                  if (body === true) {
+                    self.status = true
+                  } else if (body === false) {
+                    self.status = false
+                  } else {
+                    self.status = null
                   }
+                  fitToScreen()
                 }
               })
             }
@@ -419,7 +419,8 @@
               if (terminal && data.output) {
                 terminal.write(data.output)
                 if (typeof Edrys !== 'undefined') {
-                  Edrys.sendMessage('pty-output', data.output)
+                  const executeCmd = Edrys.module?.stationConfig?.execute || 'execute'
+                  Edrys.sendMessage('pty-output_' + executeCmd, data.output)
                 }
                 lastData = data.output
               }
@@ -430,7 +431,8 @@
               fitToScreen()
               self.status = true
               if (typeof Edrys !== 'undefined') {
-                Edrys.sendMessage('connect', true)
+                const executeCmd = Edrys.module?.stationConfig?.execute || 'execute'
+                Edrys.sendMessage('connect_' + executeCmd, true)
               }
 
               // Send initial enter to receive outputs
@@ -444,45 +446,46 @@
               console.log('Socket disconnected')
               self.status = false
               if (typeof Edrys !== 'undefined') {
-                Edrys.sendMessage('connect', false)
+                const executeCmd = Edrys.module?.stationConfig?.execute || 'execute'
+                Edrys.sendMessage('connect_' + executeCmd, false)
               }
             })
 
             if (typeof Edrys !== 'undefined') {
               Edrys.onMessage(({ from, subject, body }) => {
                 switch (subject) {
-                  case 'input_teacher': {
-                    if (self.enable.teacher && socket && socket.connected) {
-                      socket.emit('pty-input', {
-                        input: body,
-                        sessionId: sessionId
-                      })
-                    }
-                    break
-                  }
-                  case 'input_student': {
-                    if (self.enable.student && socket && socket.connected) {
-                      socket.emit('pty-input', {
-                        input: body,
-                        sessionId: sessionId
-                      })
-                    }
-                    break
-                  }
-                  case 'input_station': {
-                    if (socket && socket.connected) {
-                      socket.emit('pty-input', {
-                        input: body,
-                        sessionId: sessionId
-                      })
+                  default: {
+                    const executeCmd = Edrys.module?.stationConfig?.execute || 'execute'
+                    if (subject === 'input_teacher_' + executeCmd) {
+                      if (self.enable.teacher && socket && socket.connected) {
+                        socket.emit('pty-input', {
+                          input: body,
+                          sessionId: sessionId
+                        })
+                      }
+                    } else if (subject === 'input_student_' + executeCmd) {
+                      if (self.enable.student && socket && socket.connected) {
+                        socket.emit('pty-input', {
+                          input: body,
+                          sessionId: sessionId
+                        })
+                      }
+                    } else if (subject === 'input_station_' + executeCmd) {
+                      if (socket && socket.connected) {
+                        socket.emit('pty-input', {
+                          input: body,
+                          sessionId: sessionId
+                        })
+                      }
                     }
                     break
                   }
                   case 'join': {
                     if (typeof Edrys !== 'undefined') {
-                      Edrys.sendMessage('connect', self.status, from)
+                      const executeCmd = Edrys.module?.stationConfig?.execute || 'execute'
+                      Edrys.sendMessage('connect_' + executeCmd, self.status, from)
                       if (lastData) {
-                        Edrys.sendMessage('pty-output', lastData, from)
+                        Edrys.sendMessage('pty-output_' + executeCmd, lastData, from)
                       }
                     }
                     break
