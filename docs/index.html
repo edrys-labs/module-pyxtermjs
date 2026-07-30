@@ -14,6 +14,111 @@
       html {
         font-family: arial;
       }
+
+      #app {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem 1rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .title {
+        font-size: 1.4em;
+        line-height: 1;
+      }
+
+      /* inherit: water.css has a light and a dark variant, a fixed grey would
+         be unreadable in one of them */
+      .status {
+        font-size: small;
+        color: inherit;
+      }
+      .status > .label {
+        opacity: 0.7;
+      }
+
+      .status .badge {
+        display: inline-block;
+        padding: 0.1rem 0.5rem;
+        border-radius: 999px;
+        font-weight: bold;
+        color: #fff;
+      }
+      /* dark enough for white text to clear WCAG AA */
+      .status .badge.on {
+        background-color: #1f7a45;
+      }
+      .status .badge.off {
+        background-color: #b8384a;
+      }
+      .status .badge.wait {
+        background-color: #6b6b6b;
+      }
+
+      .controls {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: small;
+      }
+      .controls label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        margin: 0;
+        white-space: nowrap;
+      }
+      .controls input[type='checkbox'] {
+        margin: 0;
+      }
+      .controls input[type='input'] {
+        margin: 0;
+        width: 15rem;
+        font-family: monospace;
+        font-size: 0.95em;
+      }
+      .controls button {
+        margin: 0;
+        white-space: nowrap;
+      }
+
+      /* must match the xterm theme background, or the padding shows a seam */
+      #terminal {
+        background: #1a1b26;
+        border-radius: 6px;
+        padding: 6px 0 6px 6px;
+      }
+
+      /* scoped to #terminal - the chrome outside keeps water.css */
+      #terminal ::-webkit-scrollbar {
+        width: 10px;
+      }
+      #terminal ::-webkit-scrollbar-track {
+        background: #1a1b26;
+      }
+      #terminal ::-webkit-scrollbar-thumb {
+        background: #414868;
+        border-radius: 5px;
+      }
+      #terminal ::-webkit-scrollbar-thumb:hover {
+        background: #565f89;
+      }
+      /* firefox */
+      #terminal .xterm-viewport {
+        scrollbar-width: thin;
+        scrollbar-color: #414868 #1a1b26;
+      }
+
+      #app textarea {
+        flex: 1 0 100%;
+        height: 4.25rem;
+        margin: 0;
+        font-family: monospace;
+        font-size: 0.95em;
+        resize: vertical;
+      }
     </style>
     <link
       rel="stylesheet"
@@ -65,45 +170,26 @@
 
   <body style="max-width: 100%; padding-left: 0px; margin-bottom: 0px">
     <div id="app">
-      <span style="font-size: 1.4em">pyxterm.js</span>
-      <span style="font-size: small; margin-left: 2rem">
-        status:
-        <span v-if="status === false" style="background-color: #ff8383"
-          >disconnected</span
-        >
-        <span v-if="status === null">connecting ...</span>
-        <span v-if="status === true" style="background-color: lightgreen"
-          >connected</span
-        >
+      <span class="title">pyxterm.js</span>
+      <span class="status">
+        <span class="label">status:</span>
+        <span v-if="status === false" class="badge off">disconnected</span>
+        <span v-if="status === null" class="badge wait">connecting ...</span>
+        <span v-if="status === true" class="badge on">connected</span>
       </span>
 
-      <span
-        style="
-          font-size: small;
-          display: flex;
-          align-items: center;
-          float: right;
-        "
-        v-if="isStation"
-      >
+      <span class="controls" v-if="isStation">
         <label>
           student: <input type="checkbox" v-model="enable.student" />
         </label>
         <label>
           teacher: <input type="checkbox" v-model="enable.teacher" />
         </label>
-        <input type="input" style="display: inline-flex" v-model="server" />
-        <button
-          style="display: inline-flex; margin-right: 0px"
-          @click="reload()"
-        >
-          reload
-        </button>
+        <input type="input" v-model="server" />
+        <button @click="reload()">reload</button>
       </span>
 
-      <textarea style="height: 4.25rem" v-model="script" v-if="isStation">
-        {{script}}
-      </textarea>
+      <textarea v-model="script" v-if="isStation"></textarea>
     </div>
 
     <div style="width: calc(100% + 10px); height: inherit" id="terminal"></div>
@@ -291,6 +377,36 @@
               cursorBlink: true,
               macOptionIsMeta: true,
               scrollback: 10000,
+              fontFamily:
+                "'JetBrains Mono', 'Fira Code', 'Cascadia Mono', 'SF Mono', 'Menlo', 'Consolas', monospace",
+              fontSize: 14,
+              lineHeight: 1.3,
+              cursorStyle: 'bar',
+              cursorWidth: 2,
+              // keep in sync with the #terminal background in <style>
+              theme: {
+                background: '#1a1b26',
+                foreground: '#c0caf5',
+                cursor: '#c0caf5',
+                cursorAccent: '#1a1b26',
+                selectionBackground: '#33467c',
+                black: '#15161e',
+                red: '#f7768e',
+                green: '#9ece6a',
+                yellow: '#e0af68',
+                blue: '#7aa2f7',
+                magenta: '#bb9af7',
+                cyan: '#7dcfff',
+                white: '#a9b1d6',
+                brightBlack: '#414868',
+                brightRed: '#ff7a93',
+                brightGreen: '#b9f27c',
+                brightYellow: '#ff9e64',
+                brightBlue: '#7da6ff',
+                brightMagenta: '#bb9af7',
+                brightCyan: '#0db9d7',
+                brightWhite: '#c0caf5',
+              },
             })
 
             // https://github.com/xtermjs/xterm.js/issues/2941
