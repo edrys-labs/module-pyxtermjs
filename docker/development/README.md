@@ -11,6 +11,6 @@ $ docker-compose up --build
 or directly load our prebuild image from dockerhub:
 
 ``` bash
-$ docker run -it -p 5000:5000 edryslabs/module-pyxtermjs:development
+$ docker run -it -p 127.0.0.1:5000:5000 edryslabs/module-pyxtermjs:development
 ```
 

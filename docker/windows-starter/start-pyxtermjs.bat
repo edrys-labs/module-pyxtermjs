@@ -47,4 +47,4 @@ REM Start the Docker container with the USB device
 echo Starting Docker container...
 echo Container will be available at http://localhost:5000
 echo.
-wsl -e bash -c "docker run -it -p 5000:5000 --device=/dev/ttyACM0:/dev/ttyACM0 edryslabs/module-pyxtermjs:latest"
+wsl -e bash -c "docker run -it -p 127.0.0.1:5000:5000 --device=/dev/ttyACM0:/dev/ttyACM0 edryslabs/module-pyxtermjs:latest"

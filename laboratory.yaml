@@ -14,17 +14,17 @@ meta:
 
     <br><br>
 
-    <code style="margin-bottom: 5px">docker run -it -p 5000:5000
+    <code style="margin-bottom: 5px">docker run -it -p 127.0.0.1:5000:5000
     edryslabs/module-pyxtermjs</code>
 
     <hr>
 
-    <code>docker run -it -p 5000:5000
+    <code>docker run -it -p 127.0.0.1:5000:5000
     edryslabs/module-pyxtermjs:development</code>
 
     <hr>
 
-    <code>docker run -it -p 5000:5000
+    <code>docker run -it -p 127.0.0.1:5000:5000
     --device=/dev/ttyACM0:/dev/ttyACM0 --device-cgroup-rule='c 166:* rmv'
     --device-cgroup-rule='c 189:* rmv'
     edryslabs/module-pyxtermjs:arduino</code>
@@ -56,7 +56,7 @@ modules:
 
       ``` bash
 
-      $ docker run -it -p 5000:5000 edryslabs/module-pyxtermjs
+      $ docker run -it -p 127.0.0.1:5000:5000 edryslabs/module-pyxtermjs
 
       ```
 
@@ -69,7 +69,7 @@ modules:
 
       ``` bash
 
-      $ docker run -it -p 5000:5000 edryslabs/module-pyxtermjs:development
+      $ docker run -it -p 127.0.0.1:5000:5000 edryslabs/module-pyxtermjs:development
 
       ```
 
@@ -89,7 +89,7 @@ modules:
 
 
       ``` bash
-       $ docker run -it -p 5000:5000 \
+       $ docker run -it -p 127.0.0.1:5000:5000 \
           --device=/dev/ttyACM0:/dev/ttyACM0 \
           --device-cgroup-rule='c 166:* rmv' \
           --device-cgroup-rule='c 189:* rmv' \

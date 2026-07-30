@@ -83,20 +83,20 @@ $ docker-compose up
 or directly load our prebuild image from dockerhub:
 
 ``` bash
-$ docker run -it -p 5000:5000 --device=/dev/ttyACM0:/dev/ttyACM0 edryslabs/module-pyxtermjs:latest
+$ docker run -it -p 127.0.0.1:5000:5000 --device=/dev/ttyACM0:/dev/ttyACM0 edryslabs/module-pyxtermjs:latest
 ```
 
 However, if you want to build more elaborate docker images, you can have a look at the included Docker- and docker-compose files in [docker](./docker).
 Or, if you want to directly run them, simply use:
 
 ``` bash
-$ docker run -it -p 5000:5000 edryslabs/module-pyxtermjs:development
+$ docker run -it -p 127.0.0.1:5000:5000 edryslabs/module-pyxtermjs:development
 ```
 
 to start an entire development server with gcc, java, python, nodejs, etc. installed, or:
 
 ``` bash
-$ docker run -it -p 5000:5000 \
+$ docker run -it -p 127.0.0.1:5000:5000 \
   --device=/dev/ttyACM0:/dev/ttyACM0 \
   --device-cgroup-rule='c 166:* rmv' \
   --device-cgroup-rule='c 189:* rmv' \
@@ -163,7 +163,7 @@ If you prefer to run the commands manually instead of using the batch file:
 
 4. **Start the Docker container:**
    ```cmd
-   wsl -e bash -c "docker run -it -p 5000:5000 --device=/dev/ttyACM0:/dev/ttyACM0 edryslabs/module-pyxtermjs:latest"
+   wsl -e bash -c "docker run -it -p 127.0.0.1:5000:5000 --device=/dev/ttyACM0:/dev/ttyACM0 edryslabs/module-pyxtermjs:latest"
    ```
 
 5. **When finished, detach the device:**
