@@ -412,6 +412,18 @@
             // https://github.com/xtermjs/xterm.js/issues/2941
             terminal.attachCustomKeyEventHandler(customKeyEventHandler)
 
+            // A shell clearing the screen (ctrl+l, `clear`, tput clear, ...)
+            // emits CSI 2 J, which only wipes the viewport - the scrollback
+            // survives and reappears when scrolling up. Hooking the sequence
+            // instead of a keystroke covers every way of triggering it.
+            // Returning false lets xterm still perform its normal handling.
+            terminal.parser.registerCsiHandler({ final: 'J' }, (params) => {
+              if (params[0] === 2 || params[0] === 3) {
+                setTimeout(() => terminal.clear(), 0)
+              }
+              return false
+            })
+
             fit = new FitAddon.FitAddon()
             terminal.loadAddon(fit)
             terminal.loadAddon(new WebLinksAddon.WebLinksAddon())
