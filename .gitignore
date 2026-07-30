@@ -1,9 +1,17 @@
-dist
-.DS_Store
-venv
-.vscode
+# Python
+__pycache__
+*.py[cod]
 *egg-info*
 build
-__pycache__
-.parcel-cache
-node_modules
+dist
+venv
+.nox
+
+# C extension build dirs (created by pip installs into the repo)
+include
+bin
+lib
+
+# Editor / OS
+.vscode
+.DS_Store

@@ -35,12 +35,13 @@ def get_version() -> str:
 setup(
     name="pyxtermjs",
     version=get_version(),
-    author="Chad Smith",
-    author_email="chadsmith.software@gmail.com",
-    description="interactive terminal in the browser",
+    author="edrys-labs",
+    description="interactive terminal in the browser, as an edrys module",
     long_description=README,
     long_description_content_type="text/markdown",
-    url="https://github.com/cs01/pyxtermjs",
+    url="https://github.com/edrys-labs/module-pyxtermjs",
+    # Fork of https://github.com/cs01/pyxtermjs by Chad Smith (MIT).
+    # Original copyright is retained in LICENSE; see README for credits.
     license="License :: OSI Approved :: MIT License",
     packages=find_packages(exclude=EXCLUDE_FROM_PACKAGES),
     include_package_data=True,

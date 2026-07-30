@@ -6,10 +6,12 @@ Dockerfile
 *.png
 docker
 docs
-node_modules
 build
+dist
+venv
 lib
 include
+bin
 __pycache__
 *.pyc
 *.pyo

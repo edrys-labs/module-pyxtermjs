@@ -16,6 +16,7 @@ https://edrys-labs.github.io/module-pyxtermjs/index.html
 additionally you will have to clone this project and start the [pyxterm.js](https://github.com/cs01/pyxtermjs) terminal server:
 
 ```bash
+pip install -r requirements.txt
 python3 -m pyxtermjs --cors True
 ```
 
@@ -52,11 +53,11 @@ You will have to grant access via the checkboxes, which are only visible on the 
 ```
 > python3 -m pyxtermjs --help
 
-usage: __main__.py [-h] [-p PORT] [--cors CORS] [--host HOST] [--debug] [--version] [--command COMMAND] [--cmd-args CMD_ARGS] [--tmp TMP]
+usage: __main__.py [-h] [-p PORT] [--cors CORS] [--host HOST] [--debug] [--version] [--command COMMAND] [--cmd-args CMD_ARGS] [--tmp TMP] [--singleton SINGLETON]
 
 A fully functional terminal in your browser. https://github.com/cs01/pyxterm.js
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
   -p PORT, --port PORT  port to run server on (default: 5000)
   --cors CORS           enable CORS by default this is disabled (default: False)
@@ -66,6 +67,7 @@ optional arguments:
   --command COMMAND     Command to run in the terminal (default: bash)
   --cmd-args CMD_ARGS   arguments to pass to command (i.e. --cmd-args='arg1 arg2 --flag') (default: )
   --tmp TMP             use a temporary folder as base, which comes handy when using firejail (default: False)
+  --singleton SINGLETON use a single terminal for all clients (default: False)
 ```
 
 ## Docker
