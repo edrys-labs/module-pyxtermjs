@@ -117,6 +117,25 @@ makes the board re-enumerate, so its `/dev/bus/usb/<bus>/<dev>` path changes wit
 every upload. Note that this grants the container access to all USB devices on
 the host.
 
+### ESP32 devkits
+
+Espressif ESP32 boards (the `arduino-esp32` workflow) need the `:esp32` tag -
+Espressif's `esp32:esp32` core is too large to ship in `:latest`, and it is a
+different core from the `arduino:esp32` one the Arduino Nano ESP32 uses.
+
+These devkits also talk through a CH340/CP210x bridge, so they appear as
+`/dev/ttyUSB0` rather than `/dev/ttyACM0`, and `ttyUSB*` has its own device
+major number (188 instead of 166):
+
+``` bash
+$ docker run -it -p 127.0.0.1:5000:5000 \
+  --device=/dev/ttyUSB0:/dev/ttyUSB0 \
+  -v /dev/bus/usb:/dev/bus/usb \
+  --device-cgroup-rule='c 188:* rmw' \
+  --device-cgroup-rule='c 189:* rmw' \
+  edryslabs/module-pyxtermjs:esp32
+```
+
 ### Building your own image
 
 If you need additional tools, compilers, or libraries, you can build your own

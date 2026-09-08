@@ -1,0 +1,23 @@
+services:
+  pyxtermjs:
+    build: .
+    image: edryslabs/module-pyxtermjs:esp32
+    container_name: module-pyxtermjs_esp32
+    ports:
+      - '127.0.0.1:5000:5000'
+    environment:
+      - PYXTERM_CMD=zsh
+    devices:
+      # ESP32 devkits use a CH340/CP210x bridge, which enumerates as ttyUSB*,
+      # not the ttyACM* of native-USB Arduino boards.
+      - /dev/ttyUSB0
+    volumes:
+      # Needed by boards that upload over DFU (e.g. Arduino Nano ESP32):
+      # dfu-util opens the raw USB node through libusb, which the cgroup rules
+      # permit but do not create. Mount the whole tree - a DFU upload makes the
+      # board re-enumerate, so its /dev/bus/usb/<bus>/<dev> path changes with
+      # every upload.
+      - /dev/bus/usb:/dev/bus/usb
+    device_cgroup_rules:
+      - 'c 188:* rmw' # ttyUSB* serial ports (CH340/CP210x devkits)
+      - 'c 189:* rmw' # raw USB devices (/dev/bus/usb)
