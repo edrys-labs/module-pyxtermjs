@@ -4,7 +4,7 @@
 //
 // Placeholders substituted at execution time:
 //   $CODE  base64 of the student's code   $FILE  target filename
-//   $BOARD board identifier (FQBN, MCU, mbed target)
+//   $BOARD board identifier (FQBN or MCU)
 //   $PORT  serial port                    $BAUD  baud rate
 export const WORKFLOWS = {
   'arduino-avr': {
@@ -66,6 +66,35 @@ export const WORKFLOWS = {
     ].join('\n'),
   },
 
+  'arduino-stm32': {
+    filename: 'Sketch.ino',
+    board: 'NUCLEO_F401RE',
+    boards: [
+      'NUCLEO_F401RE',
+      'NUCLEO_F103RB',
+      'NUCLEO_L476RG',
+      'NUCLEO_F429ZI',
+    ],
+    port: '/dev/ttyACM0',
+    baud: 115200,
+    script: [
+      '# needs the STMicroelectronics:stm32 core. $BOARD is the bare board name;',
+      '# the full FQBN is built below. The default MassStorage upload needs the',
+      '# NODE_* volume, absent in the container, so flash via the on-board ST-LINK.',
+      'case $BOARD in',
+      '  NUCLEO_F429ZI|NUCLEO_F746ZG|NUCLEO_H743ZI2) FAMILY=Nucleo_144;;',
+      '  *) FAMILY=Nucleo_64;;',
+      'esac',
+      'FQBN=STMicroelectronics:stm32:$FAMILY:pnum=$BOARD,upload_method=OpenOCDSTLink',
+      'SKETCH=$(basename $FILE .ino)',
+      'rm -rf $SKETCH && arduino-cli sketch new $SKETCH',
+      'echo $CODE | base64 --decode > $SKETCH/$SKETCH.ino',
+      'arduino-cli compile -b $FQBN $SKETCH &&',
+      '  arduino-cli upload -b $FQBN -p $PORT $SKETCH &&',
+      '  arduino-cli monitor -p $PORT -c baudrate=$BAUD',
+    ].join('\n'),
+  },
+
   'avr-gcc': {
     filename: 'main.c',
     board: 'avr128db48',
@@ -97,22 +126,6 @@ export const WORKFLOWS = {
       "    del sys.modules['main']",
       'import main',
       '"',
-    ].join('\n'),
-  },
-
-  mbed: {
-    filename: 'main.cpp',
-    board: 'DISCO_L475VG_IOT01A',
-    boards: ['DISCO_L475VG_IOT01A', 'PORTENTA_H7_M7', 'NUCLEO_F401RE'],
-    port: '/dev/ttyACM0',
-    baud: 9600,
-    script: [
-      'PROJECT=mbed_project',
-      '[ -d "$PROJECT" ] || mbed-tools new $PROJECT',
-      'echo $CODE | base64 --decode > $PROJECT/$FILE',
-      'cd $PROJECT &&',
-      '  mbed-tools compile -m $BOARD -t GCC_ARM -f &&',
-      '  mbed-tools sterm -p $PORT -b $BAUD',
     ].join('\n'),
   },
 

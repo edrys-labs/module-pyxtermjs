@@ -11,20 +11,21 @@
           'workflow': {
             'type': 'select',
             'hint': 'Terminal workflow (toolchain). Fills in the script below. Leave empty to write your own script.',
-            'options': ['arduino-avr', 'arduino-esp32', 'avr-gcc', 'micropython', 'mbed', 'native'],
+            'options': ['arduino-avr', 'arduino-esp32', 'arduino-nano-esp32', 'arduino-stm32', 'avr-gcc', 'micropython', 'native'],
             'presets': {
               'arduino-avr': { 'board': { 'value': 'arduino:avr:uno', 'options': ['arduino:avr:uno', 'arduino:avr:mega', 'arduino:avr:nano', 'arduino:megaavr:nona4809', 'arduino:avr:leonardo', 'arduino:avr:micro'] }, 'port': '/dev/ttyACM0', 'baud': 9600, 'filename': 'Sketch.ino', 'script': &quot;SKETCH=$(basename $FILE .ino)\nrm -rf $SKETCH &amp;&amp; arduino-cli sketch new $SKETCH\necho $CODE | base64 --decode > $SKETCH/$SKETCH.ino\narduino-cli compile -b $BOARD $SKETCH &amp;&amp;\n  arduino-cli upload -b $BOARD -p $PORT $SKETCH &amp;&amp;\n  arduino-cli monitor -p $PORT -c baudrate=$BAUD&quot; },
               'arduino-esp32': { 'board': { 'value': 'esp32:esp32:esp32', 'options': ['esp32:esp32:esp32', 'esp32:esp32:esp32s3', 'esp32:esp32:esp32c3'] }, 'port': '/dev/ttyUSB0', 'baud': 115200, 'filename': 'Sketch.ino', 'script': &quot;# needs the :esp32 image tag (the ESP32 core is not in :latest)\nSKETCH=$(basename $FILE .ino)\nrm -rf $SKETCH &amp;&amp; arduino-cli sketch new $SKETCH\necho $CODE | base64 --decode > $SKETCH/$SKETCH.ino\narduino-cli compile -b $BOARD $SKETCH &amp;&amp;\n  arduino-cli upload -b $BOARD -p $PORT $SKETCH &amp;&amp;\n  arduino-cli monitor -p $PORT -c baudrate=$BAUD&quot; },
+              'arduino-nano-esp32': { 'board': { 'value': 'arduino:esp32:nano_nora', 'options': ['arduino:esp32:nano_nora'] }, 'port': '/dev/ttyACM0', 'baud': 115200, 'filename': 'Sketch.ino', 'script': &quot;# needs the arduino:esp32 core (Arduino Nano ESP32, not the Espressif core)\n# uses the default DFU upload: the board re-enumerates and runs the new\n# sketch on its own.\nSKETCH=$(basename $FILE .ino)\nrm -rf $SKETCH &amp;&amp; arduino-cli sketch new $SKETCH\necho $CODE | base64 --decode > $SKETCH/$SKETCH.ino\narduino-cli compile -b $BOARD $SKETCH &amp;&amp;\n  arduino-cli upload -b $BOARD -p $PORT $SKETCH &amp;&amp;\n  arduino-cli monitor -p $PORT -c baudrate=$BAUD&quot; },
+              'arduino-stm32': { 'board': { 'value': 'NUCLEO_F401RE', 'options': ['NUCLEO_F401RE', 'NUCLEO_F103RB', 'NUCLEO_L476RG', 'NUCLEO_F429ZI'] }, 'port': '/dev/ttyACM0', 'baud': 115200, 'filename': 'Sketch.ino', 'script': &quot;# needs the STMicroelectronics:stm32 core. $BOARD is the bare board name;\n# the full FQBN is built below. The default MassStorage upload needs the\n# NODE_* volume, absent in the container, so flash via the on-board ST-LINK.\ncase $BOARD in\n  NUCLEO_F429ZI|NUCLEO_F746ZG|NUCLEO_H743ZI2) FAMILY=Nucleo_144;;\n  *) FAMILY=Nucleo_64;;\nesac\nFQBN=STMicroelectronics:stm32:$FAMILY:pnum=$BOARD,upload_method=OpenOCDSTLink\nSKETCH=$(basename $FILE .ino)\nrm -rf $SKETCH &amp;&amp; arduino-cli sketch new $SKETCH\necho $CODE | base64 --decode > $SKETCH/$SKETCH.ino\narduino-cli compile -b $FQBN $SKETCH &amp;&amp;\n  arduino-cli upload -b $FQBN -p $PORT $SKETCH &amp;&amp;\n  arduino-cli monitor -p $PORT -c baudrate=$BAUD&quot; },
               'avr-gcc': { 'board': { 'value': 'avr128db48', 'options': ['avr128db48', 'atmega328p', 'atmega2560', 'attiny85'] }, 'port': '/dev/ttyUSB0', 'baud': 9600, 'filename': 'main.c', 'script': &quot;BASE=$(basename $FILE .c)\necho $CODE | base64 --decode > $FILE\navr-gcc -mmcu=$BOARD -Os -DF_CPU=20000000UL -o $BASE.elf $FILE &amp;&amp;\n  avr-objcopy -O ihex $BASE.elf $BASE.hex &amp;&amp;\n  avrdude -c serialupdi -P $PORT -p $BOARD -U flash:w:$BASE.hex:i &amp;&amp;\n  screen $PORT $BAUD&quot; },
               'micropython': { 'board': { 'value': '', 'options': [] }, 'port': 'auto', 'baud': 115200, 'filename': 'main.py', 'script': &quot;echo $CODE | base64 --decode > $FILE\nmpremote connect $PORT fs cp $FILE :$FILE &amp;&amp;\n  mpremote connect $PORT exec \&quot;\nimport sys\nif 'main' in sys.modules:\n    del sys.modules['main']\nimport main\n\&quot;&quot; },
-              'mbed': { 'board': { 'value': 'DISCO_L475VG_IOT01A', 'options': ['DISCO_L475VG_IOT01A', 'PORTENTA_H7_M7', 'NUCLEO_F401RE'] }, 'port': '/dev/ttyACM0', 'baud': 9600, 'filename': 'main.cpp', 'script': &quot;PROJECT=mbed_project\n[ -d \&quot;$PROJECT\&quot; ] || mbed-tools new $PROJECT\necho $CODE | base64 --decode > $PROJECT/$FILE\ncd $PROJECT &amp;&amp;\n  mbed-tools compile -m $BOARD -t GCC_ARM -f &amp;&amp;\n  mbed-tools sterm -p $PORT -b $BAUD&quot; },
               'native': { 'board': { 'value': '', 'options': [] }, 'port': '', 'baud': 9600, 'filename': 'main.py', 'script': &quot;echo $CODE | base64 --decode > $FILE\npython3 $FILE&quot; },
             },
           },
           'board': {
             'type': 'combobox',
-            'hint': 'Board identifier for the selected workflow (arduino-cli FQBN, avrdude/avr-gcc MCU or mbed target). Free text is allowed.',
-            'options': ['arduino:avr:uno', 'arduino:avr:mega', 'arduino:avr:nano', 'esp32:esp32:esp32', 'avr128db48', 'DISCO_L475VG_IOT01A'],
+            'hint': 'Board identifier for the selected workflow (arduino-cli FQBN or avrdude/avr-gcc MCU). Free text is allowed.',
+            'options': ['arduino:avr:uno', 'arduino:avr:mega', 'arduino:avr:nano', 'esp32:esp32:esp32', 'arduino:esp32:nano_nora', 'NUCLEO_F401RE', 'avr128db48'],
           },
           'port': {
             'type': 'string',
@@ -82,6 +83,6 @@
     <script src=https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js></script>
 
     
-    <script type=module src=module-pyxtermjs.7f3b0f6a.js></script>
+    <script type=module src=module-pyxtermjs.175e4e12.js></script>
   
 

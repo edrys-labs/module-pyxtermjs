@@ -68,6 +68,11 @@ RUN arduino-cli core install arduino:megaavr
 #RUN arduino-cli core install arduino:samd
 #RUN arduino-cli core install arduino:renesas_uno
 
+# STM32 / Nucleo (arduino-stm32 workflow), adds ~2.2 GB
+#RUN STM32_URL=https://github.com/stm32duino/BoardManagerFiles/raw/main/package_stmicroelectronics_index.json \
+#    && arduino-cli core update-index --additional-urls $STM32_URL \
+#    && arduino-cli core install STMicroelectronics:stm32 --additional-urls $STM32_URL
+
 # install arduino-cli libraries
 RUN arduino-cli lib install \
     "Adafruit Circuit Playground" \
