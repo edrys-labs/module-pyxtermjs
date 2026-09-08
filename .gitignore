@@ -12,6 +12,10 @@ include
 bin
 lib
 
+# Node / Parcel
+node_modules
+.parcel-cache
+
 # Editor / OS
 .vscode
 .DS_Store
