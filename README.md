@@ -86,24 +86,44 @@ or directly load our prebuild image from dockerhub:
 $ docker run -it -p 127.0.0.1:5000:5000 --device=/dev/ttyACM0:/dev/ttyACM0 edryslabs/module-pyxtermjs:latest
 ```
 
-However, if you want to build more elaborate docker images, you can have a look at the included Docker- and docker-compose files in [docker](./docker).
-Or, if you want to directly run them, simply use:
+Replace `/dev/ttyACM0` with your board's port if it differs - check with
+`arduino-cli board list` or `ls /dev/ttyACM* /dev/ttyUSB*`. The board has to be
+plugged in before you start the container, otherwise Docker refuses to start
+because the device does not exist.
 
-``` bash
-$ docker run -it -p 127.0.0.1:5000:5000 edryslabs/module-pyxtermjs:development
+### Boards that upload over DFU
+
+Some boards - such as the **Arduino Nano ESP32** - are not flashed over the
+serial port but via DFU. For those, passing `--device` alone is not enough:
+`dfu-util` opens the raw USB node through libusb, and every upload fails with
+
+```
+dfu-util: unable to initialize libusb: LIBUSB_ERROR_OTHER
 ```
 
-to start an entire development server with gcc, java, python, nodejs, etc. installed, or:
+Start the container with access to the USB devices as well:
 
 ``` bash
 $ docker run -it -p 127.0.0.1:5000:5000 \
   --device=/dev/ttyACM0:/dev/ttyACM0 \
-  --device-cgroup-rule='c 166:* rmv' \
-  --device-cgroup-rule='c 189:* rmv' \
-  edryslabs/module-pyxtermjs:arduino
+  -v /dev/bus/usb:/dev/bus/usb \
+  --device-cgroup-rule='c 166:* rmw' \
+  --device-cgroup-rule='c 189:* rmw' \
+  edryslabs/module-pyxtermjs:latest
 ```
 
-to start a container with arduino support.
+Mount the whole `/dev/bus/usb` tree rather than a single node - a DFU upload
+makes the board re-enumerate, so its `/dev/bus/usb/<bus>/<dev>` path changes with
+every upload. Note that this grants the container access to all USB devices on
+the host.
+
+### Building your own image
+
+If you need additional tools, compilers, or libraries, you can build your own
+image on top of the published ones. Have a look at the included Docker- and
+docker-compose files in [docker](./docker) as a starting point - for example
+[docker/arduino](./docker/arduino) adds the arduino-cli toolchain, cores, and
+libraries on top of the base image.
 
 ### For Windows Users
 

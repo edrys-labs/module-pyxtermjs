@@ -53,7 +53,7 @@ RUN arduino-cli upgrade && arduino-cli core update-index
 
 # install arduino-cli cores
 RUN arduino-cli core install arduino:avr
-#RUN arduino-cli core install arduino:esp32
+RUN arduino-cli core install arduino:esp32
 #RUN arduino-cli core install arduino:mbed_edge
 #RUN arduino-cli core install arduino:mbed_giga
 #RUN arduino-cli core install arduino:mbed_nano

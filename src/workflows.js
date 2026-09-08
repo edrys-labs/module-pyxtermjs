@@ -47,6 +47,25 @@ export const WORKFLOWS = {
     ].join('\n'),
   },
 
+  'arduino-nano-esp32': {
+    filename: 'Sketch.ino',
+    board: 'arduino:esp32:nano_nora',
+    boards: ['arduino:esp32:nano_nora'],
+    port: '/dev/ttyACM0',
+    baud: 115200,
+    script: [
+      '# needs the arduino:esp32 core (Arduino Nano ESP32, not the Espressif core)',
+      '# uses the default DFU upload: the board re-enumerates and runs the new',
+      '# sketch on its own.',
+      'SKETCH=$(basename $FILE .ino)',
+      'rm -rf $SKETCH && arduino-cli sketch new $SKETCH',
+      'echo $CODE | base64 --decode > $SKETCH/$SKETCH.ino',
+      'arduino-cli compile -b $BOARD $SKETCH &&',
+      '  arduino-cli upload -b $BOARD -p $PORT $SKETCH &&',
+      '  arduino-cli monitor -p $PORT -c baudrate=$BAUD',
+    ].join('\n'),
+  },
+
   'avr-gcc': {
     filename: 'main.c',
     board: 'avr128db48',
