@@ -139,9 +139,39 @@
             'type': string,
             'hint': 'Message subject to execute code (default: execute)'
           },
+          'workflow': {
+            'type': select,
+            'hint': 'Terminal workflow (toolchain). Fills in the script below. Leave empty to write your own script.',
+            'options': ['arduino-avr', 'arduino-esp32', 'avr-gcc', 'micropython', 'mbed', 'native'],
+            'presets': {
+              'arduino-avr': { 'board': { 'value': 'arduino:avr:uno', 'options': ['arduino:avr:uno', 'arduino:avr:mega', 'arduino:avr:nano', 'arduino:megaavr:nona4809', 'arduino:avr:leonardo', 'arduino:avr:micro'] }, 'port': '/dev/ttyACM0', 'baud': 9600, 'filename': 'Sketch.ino', 'script': &quot;SKETCH=$(basename $FILE .ino)\nrm -rf $SKETCH && arduino-cli sketch new $SKETCH\necho $CODE | base64 --decode > $SKETCH/$SKETCH.ino\narduino-cli compile -b $BOARD $SKETCH &&\n  arduino-cli upload -b $BOARD -p $PORT $SKETCH &&\n  arduino-cli monitor -p $PORT -c baudrate=$BAUD&quot; },
+              'arduino-esp32': { 'board': { 'value': 'esp32:esp32:esp32', 'options': ['esp32:esp32:esp32', 'esp32:esp32:esp32s3', 'esp32:esp32:esp32c3'] }, 'port': '/dev/ttyUSB0', 'baud': 115200, 'filename': 'Sketch.ino', 'script': &quot;# needs the :esp32 image tag (the ESP32 core is not in :latest)\nSKETCH=$(basename $FILE .ino)\nrm -rf $SKETCH && arduino-cli sketch new $SKETCH\necho $CODE | base64 --decode > $SKETCH/$SKETCH.ino\narduino-cli compile -b $BOARD $SKETCH &&\n  arduino-cli upload -b $BOARD -p $PORT $SKETCH &&\n  arduino-cli monitor -p $PORT -c baudrate=$BAUD&quot; },
+              'avr-gcc': { 'board': { 'value': 'avr128db48', 'options': ['avr128db48', 'atmega328p', 'atmega2560', 'attiny85'] }, 'port': '/dev/ttyUSB0', 'baud': 9600, 'filename': 'main.c', 'script': &quot;BASE=$(basename $FILE .c)\necho $CODE | base64 --decode > $FILE\navr-gcc -mmcu=$BOARD -Os -DF_CPU=20000000UL -o $BASE.elf $FILE &&\n  avr-objcopy -O ihex $BASE.elf $BASE.hex &&\n  avrdude -c serialupdi -P $PORT -p $BOARD -U flash:w:$BASE.hex:i &&\n  screen $PORT $BAUD&quot; },
+              'micropython': { 'board': { 'value': '', 'options': [] }, 'port': 'auto', 'baud': 115200, 'filename': 'main.py', 'script': &quot;echo $CODE | base64 --decode > $FILE\nmpremote connect $PORT fs cp $FILE :$FILE &&\n  mpremote connect $PORT exec \&quot;\nimport sys\nif 'main' in sys.modules:\n    del sys.modules['main']\nimport main\n\&quot;&quot; },
+              'mbed': { 'board': { 'value': 'DISCO_L475VG_IOT01A', 'options': ['DISCO_L475VG_IOT01A', 'PORTENTA_H7_M7', 'NUCLEO_F401RE'] }, 'port': '/dev/ttyACM0', 'baud': 9600, 'filename': 'main.cpp', 'script': &quot;PROJECT=mbed_project\n[ -d \&quot;$PROJECT\&quot; ] || mbed-tools new $PROJECT\necho $CODE | base64 --decode > $PROJECT/$FILE\ncd $PROJECT &&\n  mbed-tools compile -m $BOARD -t GCC_ARM -f &&\n  mbed-tools sterm -p $PORT -b $BAUD&quot; },
+              'native': { 'board': { 'value': '', 'options': [] }, 'port': '', 'baud': 9600, 'filename': 'main.py', 'script': &quot;echo $CODE | base64 --decode > $FILE\npython3 $FILE&quot; },
+            },
+          },
+          'board': {
+            'type': combobox,
+            'hint': 'Board identifier for the selected workflow (arduino-cli FQBN, avrdude/avr-gcc MCU or mbed target). Free text is allowed.',
+            'options': ['arduino:avr:uno', 'arduino:avr:mega', 'arduino:avr:nano', 'esp32:esp32:esp32', 'avr128db48', 'DISCO_L475VG_IOT01A'],
+          },
+          'port': {
+            'type': string,
+            'hint': 'Serial port of the device (e.g.: /dev/ttyACM0, /dev/ttyUSB0)'
+          },
+          'baud': {
+            'type': number,
+            'hint': 'Baud rate used for serial monitoring (default: 9600)'
+          },
+          'filename': {
+            'type': string,
+            'hint': 'Name of the file the code is written to (e.g.: Blink.ino, main.py, main.c)'
+          },
           'script': {
-            'type': text-area,
-            'hint': 'Script to be executed. The code will be replaced by $CODE. (e.g.: echo $CODE | base64 --decode)'
+            'type': code-area,
+            'hint': 'Script to be executed. Overrides the workflow. $CODE is replaced by the base64 code, $BOARD / $PORT / $BAUD / $FILE by the fields above. (e.g.: echo $CODE | base64 --decode)'
           },
           'enable': {
             'type': checkboxes,
@@ -236,6 +266,132 @@
       const DEFAULT_SERVER = 'http://localhost:5000/pty'
       const DEFAULT_SCRIPT = 'echo $CODE | base64 --decode'
 
+      // Built-in terminal workflows.
+      const WORKFLOWS = {
+        'arduino-avr': {
+          filename: 'Sketch.ino',
+          board: 'arduino:avr:uno',
+          boards: [
+            'arduino:avr:uno',
+            'arduino:avr:mega',
+            'arduino:avr:nano',
+            'arduino:megaavr:nona4809',
+            'arduino:avr:leonardo',
+            'arduino:avr:micro',
+          ],
+          port: '/dev/ttyACM0',
+          baud: 9600,
+          script: [
+            'SKETCH=$(basename $FILE .ino)',
+            'rm -rf $SKETCH && arduino-cli sketch new $SKETCH',
+            'echo $CODE | base64 --decode > $SKETCH/$SKETCH.ino',
+            'arduino-cli compile -b $BOARD $SKETCH &&',
+            '  arduino-cli upload -b $BOARD -p $PORT $SKETCH &&',
+            '  arduino-cli monitor -p $PORT -c baudrate=$BAUD',
+          ].join('\n'),
+        },
+
+        'arduino-esp32': {
+          filename: 'Sketch.ino',
+          board: 'esp32:esp32:esp32',
+          boards: ['esp32:esp32:esp32', 'esp32:esp32:esp32s3', 'esp32:esp32:esp32c3'],
+          port: '/dev/ttyUSB0',
+          baud: 115200,
+          script: [
+            '# needs the :esp32 image tag (the ESP32 core is not in :latest)',
+            'SKETCH=$(basename $FILE .ino)',
+            'rm -rf $SKETCH && arduino-cli sketch new $SKETCH',
+            'echo $CODE | base64 --decode > $SKETCH/$SKETCH.ino',
+            'arduino-cli compile -b $BOARD $SKETCH &&',
+            '  arduino-cli upload -b $BOARD -p $PORT $SKETCH &&',
+            '  arduino-cli monitor -p $PORT -c baudrate=$BAUD',
+          ].join('\n'),
+        },
+
+        'avr-gcc': {
+          filename: 'main.c',
+          board: 'avr128db48',
+          boards: ['avr128db48', 'atmega328p', 'atmega2560', 'attiny85'],
+          port: '/dev/ttyUSB0',
+          baud: 9600,
+          script: [
+            'BASE=$(basename $FILE .c)',
+            'echo $CODE | base64 --decode > $FILE',
+            'avr-gcc -mmcu=$BOARD -Os -DF_CPU=20000000UL -o $BASE.elf $FILE &&',
+            '  avr-objcopy -O ihex $BASE.elf $BASE.hex &&',
+            '  avrdude -c serialupdi -P $PORT -p $BOARD -U flash:w:$BASE.hex:i &&',
+            '  screen $PORT $BAUD',
+          ].join('\n'),
+        },
+
+        micropython: {
+          filename: 'main.py',
+          board: '',
+          boards: [],
+          port: 'auto',
+          baud: 115200,
+          script: [
+            'echo $CODE | base64 --decode > $FILE',
+            'mpremote connect $PORT fs cp $FILE :$FILE &&',
+            '  mpremote connect $PORT exec "',
+            'import sys',
+            "if 'main' in sys.modules:",
+            "    del sys.modules['main']",
+            'import main',
+            '"',
+          ].join('\n'),
+        },
+
+        mbed: {
+          filename: 'main.cpp',
+          board: 'DISCO_L475VG_IOT01A',
+          boards: ['DISCO_L475VG_IOT01A', 'PORTENTA_H7_M7', 'NUCLEO_F401RE'],
+          port: '/dev/ttyACM0',
+          baud: 9600,
+          script: [
+            'PROJECT=mbed_project',
+            '[ -d "$PROJECT" ] || mbed-tools new $PROJECT',
+            'echo $CODE | base64 --decode > $PROJECT/$FILE',
+            'cd $PROJECT &&',
+            '  mbed-tools compile -m $BOARD -t GCC_ARM -f &&',
+            '  mbed-tools sterm -p $PORT -b $BAUD',
+          ].join('\n'),
+        },
+
+        native: {
+          filename: 'main.py',
+          board: '',
+          boards: [],
+          port: '',
+          baud: 9600,
+          script: ['echo $CODE | base64 --decode > $FILE', 'python3 $FILE'].join(
+            '\n'
+          ),
+        },
+      }
+
+      // Resolution order: an explicit script always wins, then the selected
+      // workflow's template, then the historic default. All 14 existing labs
+      // set `script` and no `workflow`, so they keep their exact behaviour.
+      function resolveScript(config) {
+        if (config?.script) {
+          return config.script
+        }
+
+        return WORKFLOWS[config?.workflow]?.script || DEFAULT_SCRIPT
+      }
+
+      // A field is taken from the config when set, otherwise from the workflow.
+      function resolveField(config, name) {
+        const value = config?.[name]
+
+        if (value !== undefined && value !== null && value !== '') {
+          return value
+        }
+
+        return WORKFLOWS[config?.workflow]?.[name] ?? ''
+      }
+
       function generateSessionId() {
         return Date.now().toString(36) + Math.random().toString(36).substr(2);
       }
@@ -314,6 +470,10 @@
             },
             server: DEFAULT_SERVER,
             script: DEFAULT_SCRIPT,
+            board: '',
+            port: '',
+            baud: '',
+            filename: '',
           }
         },
         methods: {
@@ -336,12 +496,16 @@
               program += '\n'
             }
 
+            program = program
+              .replaceAll('$BOARD', this.board)
+              .replaceAll('$PORT', this.port)
+              .replaceAll('$BAUD', this.baud)
+              .replaceAll('$FILE', this.filename)
+              .replaceAll('$CODE', btoa(toUtf8(code)))
+
             if (typeof Edrys !== 'undefined') {
               const executeCmd = Edrys.module?.stationConfig?.execute || 'execute'
-              Edrys.sendMessage(
-                'input_' + Edrys.role + '_' + executeCmd,
-                program.replace('$CODE', btoa(toUtf8(code)))
-              )
+              Edrys.sendMessage('input_' + Edrys.role + '_' + executeCmd, program)
             }
           },
 
@@ -656,8 +820,14 @@
 
           if (Edrys.role === 'station') {
             app.isStation = true
-            app.server = Edrys.module?.stationConfig?.server || DEFAULT_SERVER
-            app.script = Edrys.module?.stationConfig?.script || DEFAULT_SCRIPT
+            const stationConfig = Edrys.module?.stationConfig
+
+            app.server = stationConfig?.server || DEFAULT_SERVER
+            app.script = resolveScript(stationConfig)
+            app.board = resolveField(stationConfig, 'board')
+            app.port = resolveField(stationConfig, 'port')
+            app.baud = resolveField(stationConfig, 'baud')
+            app.filename = resolveField(stationConfig, 'filename')
             app.enable.student = Edrys.module?.stationConfig?.enable?.student || false
             app.enable.teacher = Edrys.module?.stationConfig?.enable?.teacher || false
 
