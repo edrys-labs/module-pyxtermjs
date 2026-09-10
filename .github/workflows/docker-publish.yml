@@ -1,16 +1,32 @@
 name: Docker Build and Publish
+# Manual only: pick the images to publish from the Actions tab.
+#
+# The images form a chain - arduino is FROM :base, esp32 is FROM :latest
+# (the arduino image). Rebuilding a parent without its children leaves the
+# children published on the old parent layer, so when you change a parent,
+# tick its children too.
 on:
-  push:
-    branches: 'master'
-    paths:
-      - 'Dockerfile'
-      - 'docker-compose*.yml'
-      - 'docker/**'
-      - 'requirements.txt'
-      - '_assets/**'
-      - '.github/workflows/docker-publish.yml'
+  workflow_dispatch:
+    inputs:
+      base:
+        description: 'base (parent of all others)'
+        type: boolean
+        default: false
+      arduino:
+        description: 'arduino / :latest (FROM :base)'
+        type: boolean
+        default: false
+      esp32:
+        description: 'esp32 (FROM :latest, ~7.5 GB)'
+        type: boolean
+        default: false
+      development:
+        description: 'development (FROM :base)'
+        type: boolean
+        default: false
 jobs:
   base:
+    if: inputs.base
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -38,6 +54,8 @@ jobs:
             edryslabs/module-pyxtermjs:base
             edryslabs/module-pyxtermjs:base-${{ github.run_number }}
   arduino:
+    # runs if selected; waits for base only when base was also selected
+    if: inputs.arduino && !failure() && !cancelled()
     runs-on: ubuntu-latest
     needs: base
     permissions:
@@ -55,6 +73,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       # Wait a moment for base image to be available
       - name: Wait for base image
+        if: inputs.base
         run: sleep 30
       - name: Build and push Docker image (ARDUINO)
         uses: docker/build-push-action@v5
@@ -69,8 +88,9 @@ jobs:
             edryslabs/module-pyxtermjs:arduino-v${{ github.run_number }}
             edryslabs/module-pyxtermjs:latest
   esp32:
-    runs-on: ubuntu-latest
     # builds on :latest (the arduino image), not :base
+    if: inputs.esp32 && !failure() && !cancelled()
+    runs-on: ubuntu-latest
     needs: arduino
     permissions:
       contents: read
@@ -93,6 +113,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       # Wait a moment for the arduino image to be available
       - name: Wait for arduino image
+        if: inputs.arduino
         run: sleep 30
       - name: Build and push Docker image (ESP32)
         uses: docker/build-push-action@v5
@@ -107,6 +128,7 @@ jobs:
             edryslabs/module-pyxtermjs:esp32-v${{ github.run_number }}
             edryslabs/module-pyxtermjs:esp32
   development:
+    if: inputs.development && !failure() && !cancelled()
     runs-on: ubuntu-latest
     needs: base
     permissions:
@@ -124,6 +146,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       # Wait a moment for base image to be available
       - name: Wait for base image
+        if: inputs.base
         run: sleep 30
       - name: Build and push Docker image (DEVELOPMENT)
         uses: docker/build-push-action@v5
