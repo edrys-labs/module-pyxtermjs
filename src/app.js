@@ -1,5 +1,12 @@
 import './styles.css'
 
+// the build with the template compiler: the template is the HTML in #app
+import { createApp } from 'vue/dist/vue.esm-browser.prod.js'
+import { FitAddon } from '@xterm/addon-fit'
+import { SearchAddon } from '@xterm/addon-search'
+import { SerializeAddon } from '@xterm/addon-serialize'
+import { WebLinksAddon } from '@xterm/addon-web-links'
+
 import {
   DEFAULT_SCRIPT,
   DEFAULT_SERVER,
@@ -15,8 +22,6 @@ import {
   throttle,
   toUtf8,
 } from './terminal.js'
-
-const { createApp } = Vue
 
 var terminal = null
 var fit = null
@@ -231,17 +236,19 @@ const app = createApp({
       sessionId = generateSessionId()
 
       terminal = createTerminal()
+      // e2e tests read the buffer
+      window.term = terminal
 
       // https://github.com/xtermjs/xterm.js/issues/2941
       terminal.attachCustomKeyEventHandler(customKeyEventHandler)
 
       registerClearHandler(terminal)
 
-      fit = new FitAddon.FitAddon()
+      fit = new FitAddon()
       terminal.loadAddon(fit)
-      terminal.loadAddon(new WebLinksAddon.WebLinksAddon())
-      terminal.loadAddon(new SearchAddon.SearchAddon())
-      serialize = new SerializeAddon.SerializeAddon()
+      terminal.loadAddon(new WebLinksAddon())
+      terminal.loadAddon(new SearchAddon())
+      serialize = new SerializeAddon()
       terminal.loadAddon(serialize)
 
       terminal.open(document.getElementById('terminal'))
@@ -249,8 +256,9 @@ const app = createApp({
       terminal.writeln('Welcome to pyxterm.js!')
       terminal.writeln('https://github.com/cs01/pyxterm.js')
       terminal.writeln('')
-      terminal.writeln('You can copy with ctrl+shift+x')
-      terminal.writeln('You can paste with ctrl+shift+v')
+      // part of the station's screen, which students get on join: it cannot
+      // depend on whether the viewer may type
+      terminal.writeln('Copy: ctrl+shift+c   Paste: ctrl+shift+v')
       terminal.writeln('')
 
       // Improved throttling with deduplication
@@ -298,6 +306,8 @@ const app = createApp({
             // clipboard here as well pasted everything twice
             return false
           } else if (key === 'c' || key === 'x') {
+            // ctrl+shift+c is also the browser's "inspect element"
+            e.preventDefault()
             const toCopy = terminal.getSelection()
             navigator.clipboard.writeText(toCopy)
             terminal.focus()
@@ -459,7 +469,7 @@ const app = createApp({
                 if (serialize) {
                   Edrys.sendMessage(
                     'pty-screen_' + executeCmd,
-                    serialize.serialize(JOIN_SCROLLBACK),
+                    serialize.serialize({ scrollback: JOIN_SCROLLBACK }),
                     from,
                   )
                 }

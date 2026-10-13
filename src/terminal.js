@@ -1,6 +1,9 @@
 // xterm theme, terminal construction and the small timing/encoding helpers.
 // The socket + Edrys message wiring lives in app.js.
 
+import { Terminal } from '@xterm/xterm'
+import '@xterm/xterm/css/xterm.css'
+
 // Mirrored by the #terminal background in styles.css - if these drift, the
 // padding around the terminal shows a seam against the xterm canvas.
 export const TERMINAL_BACKGROUND = '#1a1b26'
