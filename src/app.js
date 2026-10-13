@@ -95,8 +95,9 @@ const app = createApp({
       }
       // Reset session
       sessionId = generateSessionId()
-      messageHandlersRegistered = false
-      this.connectStation()
+      // only the socket: the Edrys listeners from connectStation() stay, a
+      // second registration would handle every message twice
+      this.openSocket()
     },
 
     execute(code) {
@@ -254,10 +255,8 @@ const app = createApp({
       }
     },
 
-    connectStation() {
-      if (messageHandlersRegistered) return
-      messageHandlersRegistered = true
-
+    // Connect to the terminal-server. Called again by reload().
+    openSocket() {
       const self = this
 
       socket = io.connect(this.server, {
@@ -306,6 +305,16 @@ const app = createApp({
           Edrys.sendMessage('connect_' + executeCmd, false)
         }
       })
+    },
+
+    // Station only, once: open the socket and register the Edrys listeners.
+    connectStation() {
+      if (messageHandlersRegistered) return
+      messageHandlersRegistered = true
+
+      const self = this
+
+      this.openSocket()
 
       if (typeof Edrys !== 'undefined') {
         Edrys.onMessage(({ from, subject, body }) => {
