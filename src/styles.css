@@ -1,5 +1,13 @@
-html {
-  font-family: arial;
+/* the terminal takes the height the frame has left. `html > body`: Parcel
+   links this file before water.css, which would win over a plain `body` */
+html > body {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  height: 100vh;
+  max-width: 100%;
+  margin: 0;
+  padding: 0.5rem 0.5rem 0;
 }
 
 #app {
@@ -60,7 +68,7 @@ html {
 .controls input[type='checkbox'] {
   margin: 0;
 }
-.controls input[type='input'] {
+.controls input[type='url'] {
   margin: 0;
   width: 15rem;
   font-family: monospace;
@@ -73,6 +81,10 @@ html {
 
 /* must match TERMINAL_BACKGROUND in terminal.js, or the padding shows a seam */
 #terminal {
+  flex: 1;
+  min-height: 0;
+  /* a student whose frame is smaller than the station's terminal scrolls */
+  overflow: auto;
   background: #1a1b26;
   border-radius: 6px;
   padding: 6px 0 6px 6px;

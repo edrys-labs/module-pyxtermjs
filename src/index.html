@@ -92,7 +92,7 @@
     <script src="https://unpkg.com/vue@3"></script>
   </head>
 
-  <body style="max-width: 100%; padding-left: 0px; margin-bottom: 0px">
+  <body>
     <div id="app">
       <span class="title">pyxterm.js</span>
       <span class="status">
@@ -108,14 +108,20 @@
         <label>
           teacher: <input type="checkbox" v-model="enable.teacher" />
         </label>
-        <input type="input" v-model="server" />
-        <button @click="reload()">reload</button>
+        <input type="url" v-model="server" aria-label="terminal server" />
+        <button @click="reload()" title="reconnect to the terminal server">
+          <span class="oi" data-glyph="reload" aria-hidden="true"></span> reconnect
+        </button>
       </span>
 
-      <textarea v-model="script" v-if="isStation"></textarea>
+      <textarea
+        v-model="script"
+        v-if="isStation"
+        aria-label="script that runs code sent with execute"
+      ></textarea>
     </div>
 
-    <div style="width: calc(100% + 10px); height: inherit" id="terminal"></div>
+    <div id="terminal"></div>
 
     <!-- xterm -->
     <script src="https://unpkg.com/xterm@4.11.0/lib/xterm.js"></script>

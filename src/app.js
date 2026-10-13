@@ -37,34 +37,36 @@ var unreachableNoticed = false
 var stationEnable = null
 // student: the typing hint was shown since typing was last allowed
 var typingNoticed = false
+// student: the station's terminal size, null until it announces one
+var stationSize = null
+
+const STATION_OFFLINE = 'The station is not connected to its terminal server.'
 
 // A line from the module itself, not from the shell.
 function notice(text) {
   if (terminal) terminal.write('\r\n\x1b[33m' + text + '\x1b[0m\r\n')
 }
 
-function fitToScreen(dimensions) {
-  if (fit && terminal) {
-    fit.fit()
+// The station owns the pty size: it fits its own frame and sends the size to
+// the server (and, see announce(), to the room). A student keeps the
+// station's size, or fits its frame while it does not know it (older
+// stations). Returns true when the size changed.
+function fitToScreen() {
+  if (!fit || !terminal || stationSize) return false
+  const { cols, rows } = terminal
+  fit.fit()
+  if (socket) socket.emit('resize', { cols: terminal.cols, rows: terminal.rows })
+  return terminal.cols !== cols || terminal.rows !== rows
+}
 
-    let dims = {
-      cols: terminal.cols,
-      rows: terminal.rows,
-    }
-
-    if (dimensions?.cols && dimensions?.rows) {
-      dims = dimensions
-    }
-
-    // console.log("sending new dimensions to server's pty", dims);
-    if (socket) {
-      socket.emit('resize', dims)
-    } else {
-      try {
-        Edrys.sendMessage('resize', dims)
-      } catch (e) {}
-    }
-  }
+// Student: show the station's screen at the station's size; scroll if the
+// frame is smaller. Sizes from a peer are capped.
+function applyStationSize(size) {
+  const cols = Math.min(Number(size?.cols), 500)
+  const rows = Math.min(Number(size?.rows), 200)
+  if (!terminal || !(Number.isInteger(cols) && cols > 0 && Number.isInteger(rows) && rows > 0)) return
+  stationSize = { cols, rows }
+  if (terminal.cols !== cols || terminal.rows !== rows) terminal.resize(cols, rows)
 }
 
 // Station only: type into the shell of the connected terminal-server.
@@ -163,13 +165,18 @@ const app = createApp({
     },
   },
   methods: {
-    // Station: tell the room (or one peer) the status and who may type.
+    // Station: tell the room (or one peer) the status, who may type, and the
+    // terminal size.
     announce(to) {
       if (typeof Edrys === 'undefined') return
       const executeCmd = Edrys.module?.stationConfig?.execute || 'execute'
       Edrys.sendMessage(
         'connect_' + executeCmd,
-        { connected: this.status, enable: { ...this.enable } },
+        {
+          connected: this.status,
+          enable: { ...this.enable },
+          size: terminal ? { cols: terminal.cols, rows: terminal.rows } : null,
+        },
         to,
       )
     },
@@ -239,8 +246,6 @@ const app = createApp({
 
       terminal.open(document.getElementById('terminal'))
       fit.fit()
-      terminal.resize(12, Math.round((window.innerHeight - 32) / 18.5))
-      fit.fit()
       terminal.writeln('Welcome to pyxterm.js!')
       terminal.writeln('https://github.com/cs01/pyxterm.js')
       terminal.writeln('')
@@ -303,7 +308,13 @@ const app = createApp({
       }
 
       const wait_ms = 50
-      window.onresize = debounce(fitToScreen, wait_ms)
+      // the box, not the window: the station's controls and a taller script
+      // box change it too
+      new ResizeObserver(
+        debounce(() => {
+          if (fitToScreen() && this.isStation) this.announce()
+        }, wait_ms)
+      ).observe(document.getElementById('terminal'))
     },
 
     connectUser() {
@@ -324,24 +335,27 @@ const app = createApp({
               terminal.write(body)
             }
           } else if (subject === 'pty-screen_' + executeCmd) {
-            // the station's whole screen, sent when we joined
+            // the station's whole screen, sent when we joined, after the
+            // status and size; the reset wipes the status notice, so repeat it
             if (terminal && typeof body === 'string') {
               terminal.reset()
               terminal.write(body)
+              if (self.status === false) notice(STATION_OFFLINE)
             }
           } else if (subject === 'connect_' + executeCmd) {
-            // { connected, enable }; older stations send the status alone
+            // { connected, enable, size }; older stations send the status alone
             const announced = body !== null && typeof body === 'object'
             const connected = announced ? body.connected : body
             if (connected === false && self.status !== false) {
-              notice('The station is not connected to its terminal server.')
+              notice(STATION_OFFLINE)
             }
             self.status = connected === true || connected === false ? connected : null
             if (announced && body.enable) {
               stationEnable = body.enable
               if (stationEnable[Edrys.role]) typingNoticed = false
             }
-            fitToScreen()
+            if (announced && body.size) applyStationSize(body.size)
+            else fitToScreen()
           }
         })
       }
@@ -438,8 +452,10 @@ const app = createApp({
               if (typeof Edrys !== 'undefined') {
                 const executeCmd =
                   Edrys.module?.stationConfig?.execute || 'execute'
-                // the screen, not only the last output chunk; before the
-                // status, whose notice the screen's reset would wipe
+                // the status and size first, so the screen lands in a
+                // terminal of the right size; then the screen, not only the
+                // last output chunk
+                self.announce(from)
                 if (serialize) {
                   Edrys.sendMessage(
                     'pty-screen_' + executeCmd,
@@ -447,12 +463,7 @@ const app = createApp({
                     from,
                   )
                 }
-                self.announce(from)
               }
-              break
-            }
-            case 'resize': {
-              fitToScreen(body)
               break
             }
           }
