@@ -49,8 +49,11 @@ the one named like the `filename` setting, else the first with the same extensio
 files are written by `$FILES` (the arduino workflows put them into the sketch folder), or, if the script has no
 `$FILES`, into the current directory before the script runs. File names must be plain names (letters, digits,
 `_`, `.`, `-`; no paths, no leading dot). Other files are skipped with a warning in the console.
-By default students and teachers cannot directly access the terminal, they will see only the output.
-You will have to grant access via the checkboxes, which are only visible on the station.
+
+By default students and teachers cannot use the terminal, they will see only the output: they can neither type
+into it nor run code from an editor module, because that code runs on the station's computer too.
+You will have to grant access via the `enable` checkboxes (`student`, `teacher`), which are only visible on the station.
+Code from modules on the station itself always runs.
 
 ![station-control](./pyxterm.png)
 

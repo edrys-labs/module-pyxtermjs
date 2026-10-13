@@ -401,6 +401,18 @@ const app = createApp({
 
         Edrys.onMessage(({ from, subject, body, module }) => {
           if (subject === (Edrys.module?.stationConfig?.execute || 'execute')) {
+            // code runs on the station's host, so it needs the same checkbox
+            // as typing; the station's own modules may always
+            const role = senderRole(from)
+            if (
+              role !== 'station' &&
+              !(role === 'teacher' && self.enable.teacher) &&
+              !(role === 'student' && self.enable.student)
+            ) {
+              console.warn(`pyxtermjs: ignored code from a ${role || 'unknown peer'}; enable it in the station settings`)
+              return
+            }
+
             const upload = parseUpload(body, self.filename)
 
             if (upload) {
