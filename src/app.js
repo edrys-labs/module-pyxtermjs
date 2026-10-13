@@ -21,7 +21,10 @@ const { createApp } = Vue
 var terminal = null
 var fit = null
 var socket = null
-var lastData = null
+var serialize = null
+
+// rows of scrollback the station replays to a peer that joins
+const JOIN_SCROLLBACK = 500
 
 // Add session management
 var sessionId = null
@@ -200,6 +203,8 @@ const app = createApp({
       terminal.loadAddon(fit)
       terminal.loadAddon(new WebLinksAddon.WebLinksAddon())
       terminal.loadAddon(new SearchAddon.SearchAddon())
+      serialize = new SerializeAddon.SerializeAddon()
+      terminal.loadAddon(serialize)
 
       terminal.open(document.getElementById('terminal'))
       fit.fit()
@@ -284,6 +289,12 @@ const app = createApp({
             if (terminal && typeof body === 'string') {
               terminal.write(body)
             }
+          } else if (subject === 'pty-screen_' + executeCmd) {
+            // the station's whole screen, sent when we joined
+            if (terminal && typeof body === 'string') {
+              terminal.reset()
+              terminal.write(body)
+            }
           } else if (subject === 'connect_' + executeCmd) {
             if (body === true) {
               self.status = true
@@ -320,7 +331,6 @@ const app = createApp({
             const executeCmd = Edrys.module?.stationConfig?.execute || 'execute'
             Edrys.sendMessage('pty-output_' + executeCmd, data.output)
           }
-          lastData = data.output
         }
       })
 
@@ -384,8 +394,13 @@ const app = createApp({
                 const executeCmd =
                   Edrys.module?.stationConfig?.execute || 'execute'
                 Edrys.sendMessage('connect_' + executeCmd, self.status, from)
-                if (lastData) {
-                  Edrys.sendMessage('pty-output_' + executeCmd, lastData, from)
+                // the screen, not only the last output chunk
+                if (serialize) {
+                  Edrys.sendMessage(
+                    'pty-screen_' + executeCmd,
+                    serialize.serialize(JOIN_SCROLLBACK),
+                    from,
+                  )
                 }
               }
               break
