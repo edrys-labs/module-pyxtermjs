@@ -28,7 +28,11 @@ app.config["child_pid"] = dict()
 app.config["tmp"] = dict()
 app.config["singleton"] = False
 
-socketio = SocketIO(app, cors_allowed_origins='*')
+# bound to the app in main(), once the allowed origins are known
+socketio = SocketIO()
+
+# the published module, and the module from `npm run watch`; its iframe is what connects
+DEFAULT_ORIGINS = "https://edrys-labs.github.io,http://localhost:3002,http://127.0.0.1:3002"
 
 
 def set_winsize(fd, row, col, xpix=0, ypix=0):
@@ -157,6 +161,14 @@ def main():
     )
     parser.add_argument("-p", "--port", default=5000, help="port to run server on")
     parser.add_argument("--cors", default=False, help="enable CORS by default this is disabled")
+    parser.add_argument(
+        "--origins",
+        default=os.environ.get("PYXTERM_ORIGINS", DEFAULT_ORIGINS),
+        help=(
+            "comma-separated origins whose pages may connect to the terminal, besides this "
+            "server itself (env PYXTERM_ORIGINS); '*' allows every website"
+        ),
+    )
 
     parser.add_argument(
         "--host",
@@ -208,7 +220,18 @@ def main():
         stream=sys.stdout,
         level=logging.DEBUG if args.debug or os.environ.get("PYXTERM_DEBUG") else logging.INFO,
     )
+    # Every tab in the station's browser can reach localhost, so only the module's
+    # origin and this server's own pages (the standalone terminal) may open a shell.
+    origins = [o.strip() for o in args.origins.split(",") if o.strip()]
+    if "*" in origins:
+        logging.warning("any website open in this browser can use the terminal (--origins '*')")
+        origins = "*"
+    else:
+        origins += [f"http://localhost:{args.port}", f"http://127.0.0.1:{args.port}"]
+    socketio.init_app(app, cors_allowed_origins=origins)
+
     logging.info(f"serving on http://{args.host}:{args.port}")
+    logging.info(f"allowed origins: {origins}")
 
     socketio.run(app,
                  debug=args.debug or os.environ.get("PYXTERM_DEBUG"),

@@ -53,7 +53,7 @@ You will have to grant access via the checkboxes, which are only visible on the 
 ```
 > python3 -m pyxtermjs --help
 
-usage: __main__.py [-h] [-p PORT] [--cors CORS] [--host HOST] [--debug] [--version] [--command COMMAND] [--cmd-args CMD_ARGS] [--tmp TMP] [--singleton SINGLETON]
+usage: __main__.py [-h] [-p PORT] [--cors CORS] [--origins ORIGINS] [--host HOST] [--debug] [--version] [--command COMMAND] [--cmd-args CMD_ARGS] [--tmp TMP] [--singleton SINGLETON]
 
 A fully functional terminal in your browser. https://github.com/cs01/pyxterm.js
 
@@ -61,6 +61,9 @@ options:
   -h, --help            show this help message and exit
   -p PORT, --port PORT  port to run server on (default: 5000)
   --cors CORS           enable CORS by default this is disabled (default: False)
+  --origins ORIGINS     comma-separated origins whose pages may connect to the terminal, besides this server
+                        itself (env PYXTERM_ORIGINS); '*' allows every website (default:
+                        https://edrys-labs.github.io,http://localhost:3002,http://127.0.0.1:3002)
   --host HOST           host to run server on (use 0.0.0.0 to allow access from other hosts) (default: 127.0.0.1)
   --debug               debug the server (default: False)
   --version             print version and exit (default: False)
@@ -225,6 +228,16 @@ npm run build   # production build in dist/
 `dist/` is not committed. On every push to `master`, the [deploy workflow](./.github/workflows/deploy.yml)
 builds it and publishes it to GitHub Pages
 (GitHub Pages source: "GitHub Actions").
+
+The terminal server only accepts connections from pages it knows: the published module
+(`https://edrys-labs.github.io`), `npm run watch` (`http://localhost:3002`, `http://127.0.0.1:3002`) and its own
+pages. Any other website open in the station's browser could otherwise type into the shell. If you serve the
+module from somewhere else, list that origin (this replaces the defaults; `localhost` and `127.0.0.1` differ):
+
+``` bash
+PYXTERM_ORIGINS=https://my-host.example,https://edrys-labs.github.io python3 -m pyxtermjs
+docker run -it -p 127.0.0.1:5000:5000 -e PYXTERM_ORIGINS=https://my-host.example edryslabs/module-pyxtermjs
+```
 
 The terminal server serves a standalone terminal without Edrys at `http://localhost:5000/`
 ([docs/direct.html](./docs/direct.html)).
