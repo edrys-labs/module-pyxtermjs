@@ -53,6 +53,22 @@ function fitToScreen(dimensions) {
   }
 }
 
+// Station only: type into the shell of the connected terminal-server.
+function writeToShell(input) {
+  if (socket && socket.connected && typeof input === 'string') {
+    socket.emit('pty-input', {
+      input: input,
+      sessionId: sessionId,
+    })
+  }
+}
+
+// The sender's role as edrys-Lite derives it from the class setup. Never use
+// the role in the message subject: the sender chooses that.
+function senderRole(from) {
+  return Edrys.liveClass?.users?.[from]?.role
+}
+
 const app = createApp({
   data() {
     return {
@@ -101,10 +117,7 @@ const app = createApp({
         .replaceAll('$FILE', this.filename)
         .replaceAll('$CODE', btoa(toUtf8(code)))
 
-      if (typeof Edrys !== 'undefined') {
-        const executeCmd = Edrys.module?.stationConfig?.execute || 'execute'
-        Edrys.sendMessage('input_' + Edrys.role + '_' + executeCmd, program)
-      }
+      writeToShell(program)
     },
 
     store(file) {
@@ -122,10 +135,7 @@ const app = createApp({
         )} | base64 --decode > ${toUtf8(name)}\n`
       }
 
-      if (typeof Edrys !== 'undefined') {
-        const executeCmd = Edrys.module?.stationConfig?.execute || 'execute'
-        Edrys.sendMessage('input_' + Edrys.role + '_' + executeCmd, command)
-      }
+      writeToShell(command)
     },
 
     initTerminal() {
@@ -303,26 +313,16 @@ const app = createApp({
             default: {
               const executeCmd =
                 Edrys.module?.stationConfig?.execute || 'execute'
-              if (subject === 'input_teacher_' + executeCmd) {
-                if (self.enable.teacher && socket && socket.connected) {
-                  socket.emit('pty-input', {
-                    input: body,
-                    sessionId: sessionId,
-                  })
-                }
-              } else if (subject === 'input_student_' + executeCmd) {
-                if (self.enable.student && socket && socket.connected) {
-                  socket.emit('pty-input', {
-                    input: body,
-                    sessionId: sessionId,
-                  })
-                }
-              } else if (subject === 'input_station_' + executeCmd) {
-                if (socket && socket.connected) {
-                  socket.emit('pty-input', {
-                    input: body,
-                    sessionId: sessionId,
-                  })
+              if (
+                subject === 'input_teacher_' + executeCmd ||
+                subject === 'input_student_' + executeCmd
+              ) {
+                const role = senderRole(from)
+                if (
+                  (role === 'teacher' && self.enable.teacher) ||
+                  (role === 'student' && self.enable.student)
+                ) {
+                  writeToShell(body)
                 }
               }
               break
