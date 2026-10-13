@@ -27,7 +27,7 @@ meta:
     <code>docker run -it -p 127.0.0.1:5000:5000
     --device=/dev/ttyACM0:/dev/ttyACM0 --device-cgroup-rule='c 166:* rmw'
     --device-cgroup-rule='c 189:* rmw'
-    edryslabs/module-pyxtermjs:arduino</code>
+    edryslabs/module-pyxtermjs:latest</code>
   selfAssign: true
   defaultNumberOfRooms: 0
 members:
@@ -93,7 +93,7 @@ modules:
           --device=/dev/ttyACM0:/dev/ttyACM0 \
           --device-cgroup-rule='c 166:* rmw' \
           --device-cgroup-rule='c 189:* rmw' \
-          edryslabs/module-pyxtermjs:arduino
+          edryslabs/module-pyxtermjs:latest
       ```
 
 

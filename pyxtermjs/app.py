@@ -21,15 +21,19 @@ logging.getLogger("werkzeug").setLevel(logging.ERROR)
 
 __version__ = "0.5.0.0"
 
-app = Flask(__name__, template_folder="../docs", static_folder=".", static_url_path="")
-app.config["SECRET_KEY"] = "secret!"
+# no static folder: it was this package's directory, so /app.py served the source
+app = Flask(__name__, template_folder="../docs", static_folder=None)
+app.config["SECRET_KEY"] = os.urandom(32)
 app.config["fd"] = dict()
 app.config["child_pid"] = dict()
 app.config["tmp"] = dict()
 app.config["singleton"] = False
 
-# bound to the app in main(), once the allowed origins are known
-socketio = SocketIO()
+# bound to the app in main(), once the allowed origins are known. Threading,
+# not whatever async library happens to be installed: eventlet 0.33 failed on
+# Python 3.12 and the server fell back to long-polling, which lost keystrokes.
+# simple-websocket provides the WebSocket transport.
+socketio = SocketIO(async_mode="threading")
 
 # the published module, and the module from `npm run watch`; its iframe is what connects
 DEFAULT_ORIGINS = "https://edrys-labs.github.io,http://localhost:3002,http://127.0.0.1:3002"
@@ -69,17 +73,20 @@ def pty_input(data):
     terminal.
     """
     id = "0" if app.config["singleton"] else request.sid
-    if app.config["fd"][id]:
+    # .get: input can still arrive after disconnect() removed the shell
+    fd = app.config["fd"].get(id)
+    if fd:
         logging.debug("received input from browser: %s" % data["input"])
-        os.write(app.config["fd"][id], data["input"].encode())
+        os.write(fd, data["input"].encode())
 
 
 @socketio.on("resize", namespace="/pty")
 def resize(data):
     id = "0" if app.config["singleton"] else request.sid
-    if app.config["fd"][id] and "rows" in data and "cols" in data:
+    fd = app.config["fd"].get(id)
+    if fd and "rows" in data and "cols" in data:
         logging.debug(f"Resizing window to {data['rows']}x{data['cols']}")
-        set_winsize(app.config["fd"][id], data["rows"], data["cols"])
+        set_winsize(fd, data["rows"], data["cols"])
 
 @socketio.on("disconnect", namespace="/pty")
 def disconnect():
@@ -108,7 +115,7 @@ def handle_sigterm(signum, frame):
     os._exit(0)
 
 @socketio.on("connect", namespace="/pty")
-def connect():
+def connect(auth=None):
     """new client connected"""
     logging.info("new client connected " + request.sid)
 
@@ -131,7 +138,8 @@ def connect():
                 # of this subprocess
                 subprocess.run(app.config["cmd"], cwd=app.config["tmp"][id])
             else:
-                subprocess.run(app.config["cmd"])
+                # home, not the server's directory (/var/www in the images)
+                subprocess.run(app.config["cmd"], cwd=os.path.expanduser("~"))
     else:
         # this is the parent process fork.
         # store child fd and pid
@@ -143,12 +151,21 @@ def connect():
         # but if they come before the background task never starts
         socketio.start_background_task(target=read_and_forward_pty_output, id=id)
 
-        logging.info("child pid is " + child_pid)
+        logging.info("child pid is %s", child_pid)
         logging.info(
             f"starting background task with command `{cmd}` to continously read "
             "and forward pty output to client"
         )
         logging.info("task started")
+
+
+def flag(value):
+    """An on/off option: `--tmp` alone, or `--tmp True` / `--tmp False` as older docs write it."""
+    if value.lower() in ("true", "1", "yes", "on"):
+        return True
+    if value.lower() in ("false", "0", "no", "off"):
+        return False
+    raise argparse.ArgumentTypeError(f"expected True or False, not {value!r}")
 
 
 def main():
@@ -160,7 +177,14 @@ def main():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument("-p", "--port", default=5000, help="port to run server on")
-    parser.add_argument("--cors", default=False, help="enable CORS by default this is disabled")
+    parser.add_argument(
+        "--cors",
+        type=flag,
+        nargs="?",
+        const=True,
+        default=False,
+        help="enable CORS (env PYXTERM_CORS=True); `--cors True` also works",
+    )
     parser.add_argument(
         "--origins",
         default=os.environ.get("PYXTERM_ORIGINS", DEFAULT_ORIGINS),
@@ -187,14 +211,21 @@ def main():
     )
     parser.add_argument(
         "--tmp",
-        default="False",
-        help="use a temporary folder as base, which comes handy when using firejail",
+        type=flag,
+        nargs="?",
+        const=True,
+        default=False,
+        help="start each shell in a new temporary folder instead of the home directory, "
+        "which comes handy when using firejail (env PYXTERM_USE_TMP=True)",
     )
 
     parser.add_argument(
         "--singleton",
-        default="False",
-        help="use a single terminal for all clients",
+        type=flag,
+        nargs="?",
+        const=True,
+        default=False,
+        help="use a single terminal for all clients (env PYXTERM_SINGLETON=True)",
     )
 
     args = parser.parse_args()
@@ -205,11 +236,11 @@ def main():
     app.config["cmd"] = [args.command or os.environ.get(
         "PYXTERM_CMD")] + shlex.split(args.cmd_args or os.environ.get("PYXTERM_CMD_ARGS") or "")
 
-    app.config["useTmp"] = args.tmp or os.environ.get("PYXTERM_USE_TMP")
+    app.config["useTmp"] = args.tmp or os.environ.get("PYXTERM_USE_TMP") == "True"
 
-    app.config["singleton"] = args.singleton == "True" or os.environ.get("PYXTERM_SINGLETON") == "True"
+    app.config["singleton"] = args.singleton or os.environ.get("PYXTERM_SINGLETON") == "True"
 
-    if args.cors or os.environ.get("PYXTERM_CORS"):
+    if args.cors or os.environ.get("PYXTERM_CORS") == "True":
         CORS(app)
 
     green = "\033[92m"
@@ -233,10 +264,14 @@ def main():
     logging.info(f"serving on http://{args.host}:{args.port}")
     logging.info(f"allowed origins: {origins}")
 
+    # Werkzeug's server is fine here: one station's shell, normally on
+    # 127.0.0.1. Flask-SocketIO refuses it without a tty (docker without -it,
+    # services) unless allowed.
     socketio.run(app,
                  debug=args.debug or os.environ.get("PYXTERM_DEBUG"),
                  port=args.port or os.environ.get("PYXTERM_PORT"),
-                 host=args.host or os.environ.get("PYXTERM_HOST"))
+                 host=args.host or os.environ.get("PYXTERM_HOST"),
+                 allow_unsafe_werkzeug=True)
 
 
 if __name__ == "__main__":

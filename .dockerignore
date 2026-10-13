@@ -6,8 +6,14 @@ Dockerfile
 *.png
 docker
 docs
+# the standalone terminal the server renders at /
+!docs/direct.html
 build
 dist
+# the module's frontend build, not needed by the server
+node_modules
+.parcel-cache
+.parcel-dev
 venv
 lib
 include
