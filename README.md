@@ -29,11 +29,16 @@ python3 -m pyxtermjs
 ```
 
 To restrict what the shell can do, run it in a container (see [Docker](#docker)) or, as below, through
-[firejail](https://firejail.wordpress.com/documentation-2/basic-usage/). The `--private-home` option is optional;
-it copies your zsh configuration (paths relative to your home) into the firejail home folder.
+[firejail](https://firejail.wordpress.com/documentation-2/basic-usage/). They are not the same: the container
+brings its own system (Ubuntu with arduino-cli and the board cores) and sees only the devices you pass in.
+firejail sandboxes your own machine. With the options below the shell gets an empty, throwaway home folder and no
+network, but it runs your machine's programs and can read its system files (`/usr`, `/etc`). For a class, use the
+container. firejail is for a quick setup with tools that are already installed.
+
+The `--private-home` option is optional; it copies your zsh configuration (paths relative to your home) into the firejail home folder.
 
 ``` bash
-python3 -m pyxtermjs --tmp --command firejail --cmd-args='--noroot --private --quiet --cpu=1 --nice=19 --hostname=host --net=none --no3d --nosound --rlimit-cpu=1 --allow-debuggers --shell=/bin/zsh --private-home=.zshrc,.oh-my-zsh'
+python3 -m pyxtermjs --tmp --command firejail --cmd-args='--noroot --private --quiet --cpu=1 --nice=19 --hostname=host --net=none --no3d --nosound --rlimit-cpu=1 --allow-debuggers --private-home=.zshrc,.oh-my-zsh zsh'
 ```
 
 ## Configuration
