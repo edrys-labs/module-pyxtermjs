@@ -31,6 +31,17 @@ var sessionId = null
 var isProcessingInput = false
 var inputQueue = []
 var messageHandlersRegistered = false
+// station: the unreachable server was reported in the terminal
+var unreachableNoticed = false
+// student: the station's checkboxes as it last announced them, null until then
+var stationEnable = null
+// student: the typing hint was shown since typing was last allowed
+var typingNoticed = false
+
+// A line from the module itself, not from the shell.
+function notice(text) {
+  if (terminal) terminal.write('\r\n\x1b[33m' + text + '\x1b[0m\r\n')
+}
 
 function fitToScreen(dimensions) {
   if (fit && terminal) {
@@ -142,7 +153,27 @@ const app = createApp({
       filename: '',
     }
   },
+  watch: {
+    // students show a hint when they type without permission
+    enable: {
+      deep: true,
+      handler() {
+        if (this.isStation) this.announce()
+      },
+    },
+  },
   methods: {
+    // Station: tell the room (or one peer) the status and who may type.
+    announce(to) {
+      if (typeof Edrys === 'undefined') return
+      const executeCmd = Edrys.module?.stationConfig?.execute || 'execute'
+      Edrys.sendMessage(
+        'connect_' + executeCmd,
+        { connected: this.status, enable: { ...this.enable } },
+        to,
+      )
+    },
+
     reload() {
       if (socket) {
         socket.removeAllListeners()
@@ -229,6 +260,16 @@ const app = createApp({
         }
       }, 50)
 
+      // the station drops input it does not allow; say so once instead of
+      // letting the keys vanish
+      const toStation = (data) => {
+        if (stationEnable?.[Edrys.role] === false && !typingNoticed) {
+          typingNoticed = true
+          notice(`Typing is not enabled for ${Edrys.role}s at this station.`)
+        }
+        tx(data)
+      }
+
       terminal.onData((data) => {
         if (socket && socket.connected) {
           socket.emit('pty-input', {
@@ -236,7 +277,7 @@ const app = createApp({
             sessionId: sessionId,
           })
         } else if (typeof Edrys !== 'undefined') {
-          tx(data)
+          toStation(data)
         }
       })
 
@@ -254,7 +295,7 @@ const app = createApp({
                   sessionId: sessionId,
                 })
               } else if (typeof Edrys !== 'undefined') {
-                tx(toPaste)
+                toStation(toPaste)
               }
             })
             return false
@@ -296,12 +337,16 @@ const app = createApp({
               terminal.write(body)
             }
           } else if (subject === 'connect_' + executeCmd) {
-            if (body === true) {
-              self.status = true
-            } else if (body === false) {
-              self.status = false
-            } else {
-              self.status = null
+            // { connected, enable }; older stations send the status alone
+            const announced = body !== null && typeof body === 'object'
+            const connected = announced ? body.connected : body
+            if (connected === false && self.status !== false) {
+              notice('The station is not connected to its terminal server.')
+            }
+            self.status = connected === true || connected === false ? connected : null
+            if (announced && body.enable) {
+              stationEnable = body.enable
+              if (stationEnable[Edrys.role]) typingNoticed = false
             }
             fitToScreen()
           }
@@ -313,15 +358,27 @@ const app = createApp({
     openSocket() {
       const self = this
 
+      // no limit on attempts: stations run unattended, and the server may be
+      // down for longer (container restart, laptop asleep)
       socket = io.connect(this.server, {
-        reconnectionAttempts: 10,
+        reconnectionDelayMax: 5000,
         timeout: 5000,
         forceNew: true,
       })
 
       socket.on('connect_error', (error) => {
         console.log('Connection error:', error.message)
-        self.status = false
+        if (!unreachableNoticed) {
+          unreachableNoticed = true
+          notice(
+            `Cannot reach the terminal server at ${self.server}. Start it, e.g.: ` +
+              'docker run -it -p 127.0.0.1:5000:5000 edryslabs/module-pyxtermjs:latest'
+          )
+        }
+        if (self.status !== false) {
+          self.status = false
+          self.announce()
+        }
       })
 
       socket.on('pty-output', function (data) {
@@ -338,10 +395,8 @@ const app = createApp({
         console.log('Socket connected with session:', sessionId)
         fitToScreen()
         self.status = true
-        if (typeof Edrys !== 'undefined') {
-          const executeCmd = Edrys.module?.stationConfig?.execute || 'execute'
-          Edrys.sendMessage('connect_' + executeCmd, true)
-        }
+        unreachableNoticed = false
+        self.announce()
 
         // Send initial enter to receive outputs
         socket.emit('pty-input', {
@@ -353,10 +408,7 @@ const app = createApp({
       socket.on('disconnect', () => {
         console.log('Socket disconnected')
         self.status = false
-        if (typeof Edrys !== 'undefined') {
-          const executeCmd = Edrys.module?.stationConfig?.execute || 'execute'
-          Edrys.sendMessage('connect_' + executeCmd, false)
-        }
+        self.announce()
       })
     },
 
@@ -393,8 +445,8 @@ const app = createApp({
               if (typeof Edrys !== 'undefined') {
                 const executeCmd =
                   Edrys.module?.stationConfig?.execute || 'execute'
-                Edrys.sendMessage('connect_' + executeCmd, self.status, from)
-                // the screen, not only the last output chunk
+                // the screen, not only the last output chunk; before the
+                // status, whose notice the screen's reset would wipe
                 if (serialize) {
                   Edrys.sendMessage(
                     'pty-screen_' + executeCmd,
@@ -402,6 +454,7 @@ const app = createApp({
                     from,
                   )
                 }
+                self.announce(from)
               }
               break
             }
@@ -482,10 +535,10 @@ if (typeof Edrys !== 'undefined') {
   })
 }
 
-// Fallback initialization
-setTimeout(function () {
-  if (typeof Edrys === 'undefined' || !Edrys.module) {
-    console.warn('Edrys not available, connecting directly')
-    app.connectStation()
-  }
-}, 5000)
+// Opened directly, not in Edrys: connect to the local server. Never inside
+// Edrys, where a late config would otherwise turn a student into a station
+// of its own localhost.
+if (window.parent === window) {
+  console.warn('not running in Edrys, connecting directly')
+  app.connectStation()
+}
