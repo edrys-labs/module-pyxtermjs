@@ -288,16 +288,9 @@ const app = createApp({
         if (e.ctrlKey && e.shiftKey) {
           const key = e.key.toLowerCase()
           if (key === 'v') {
-            navigator.clipboard.readText().then((toPaste) => {
-              if (socket && socket.connected) {
-                socket.emit('pty-input', {
-                  input: toPaste,
-                  sessionId: sessionId,
-                })
-              } else if (typeof Edrys !== 'undefined') {
-                toStation(toPaste)
-              }
-            })
+            // only keep xterm from sending ^V: the browser pastes on its own
+            // (a `paste` event, which xterm passes to onData); reading the
+            // clipboard here as well pasted everything twice
             return false
           } else if (key === 'c' || key === 'x') {
             const toCopy = terminal.getSelection()
