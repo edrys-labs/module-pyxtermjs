@@ -3,8 +3,8 @@
   "version": "2.0.0",
   "description": "Terminal-server module for Edrys classrooms, based on pyxtermjs.",
   "scripts": {
-    "watch": "npx parcel serve src/index.html --open --port 3002",
-    "build": "npx parcel build src/index.html --no-scope-hoist --dist-dir docs --public-url ./",
+    "watch": "npx parcel serve src/index.html --dist-dir .parcel-dev --open --port 3002",
+    "build": "npx parcel build src/index.html --no-scope-hoist --dist-dir dist --public-url ./",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",

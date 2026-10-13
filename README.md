@@ -212,6 +212,23 @@ If you prefer to run the commands manually instead of using the batch file:
 
 Replace `<BUSID>` with your actual device's bus ID (e.g., `5-1`).
 
+## Development
+
+The module's source is in [src](./src) and is bundled with [Parcel](https://parceljs.org):
+
+``` bash
+npm install
+npm run watch   # dev server on http://localhost:3002/index.html, add this URL to a class
+npm run build   # production build in dist/
+```
+
+`dist/` is not committed. On every push to `master`, the [deploy workflow](./.github/workflows/deploy.yml)
+builds it and publishes it to GitHub Pages
+(GitHub Pages source: "GitHub Actions").
+
+The terminal server serves a standalone terminal without Edrys at `http://localhost:5000/`
+([docs/direct.html](./docs/direct.html)).
+
 ## Edrys - Classroom
 
 You can try out the following classroom/lab configuration for sharing a terminal with your students:

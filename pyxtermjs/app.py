@@ -51,11 +51,9 @@ def read_and_forward_pty_output(id):
             break
 
 
+# A standalone terminal for trying the server without Edrys. The Edrys
+# module itself is built from src/ and published to GitHub Pages.
 @app.route("/")
-def index():
-    return render_template("index.html")
-
-
 @app.route("/dir")
 def direct():
     return render_template("direct.html")

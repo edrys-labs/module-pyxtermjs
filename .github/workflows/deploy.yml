@@ -29,14 +29,9 @@ jobs:
 
       - run: npm run build
 
-      # Pages would otherwise run the output through Jekyll, which drops files
-      # and directories beginning with an underscore. The repo root has one of
-      # these, but only the uploaded directory is served here.
-      - run: touch docs/.nojekyll
-
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: docs
+          path: dist
 
   deploy:
     needs: build

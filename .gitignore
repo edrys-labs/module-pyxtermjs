@@ -15,6 +15,7 @@ lib
 # Node / Parcel
 node_modules
 .parcel-cache
+.parcel-dev
 
 # Editor / OS
 .vscode
