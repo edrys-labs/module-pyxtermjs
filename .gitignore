@@ -20,3 +20,7 @@ node_modules
 # Editor / OS
 .vscode
 .DS_Store
+
+# oh-my-zsh writes its caches here (copied into the images)
+_assets/oh-my-zsh/cache/*
+!_assets/oh-my-zsh/cache/.gitkeep

@@ -23,9 +23,12 @@ ARG gid=1000
 RUN groupadd -g ${gid} ${group} && \
     useradd -u ${uid} -g ${group} -s /bin/sh -m ${user}
 
-# Copy zsh configuration
-COPY _assets/.zshrc /home/appuser/.zshrc
-COPY _assets/oh-my-zsh /home/appuser/.oh-my-zsh
+# Copy zsh configuration. Owned by the user, who writes oh-my-zsh's cache,
+# and not group-writable whatever the build host's umask: zsh refuses
+# completions from writable directories and warns in every new shell.
+COPY --chown=${user}:${group} _assets/.zshrc /home/appuser/.zshrc
+COPY --chown=${user}:${group} _assets/oh-my-zsh /home/appuser/.oh-my-zsh
+RUN chmod -R go-w /home/appuser/.oh-my-zsh /home/appuser/.zshrc
 
 # Copy application files
 COPY . .

@@ -1,4 +1,4 @@
-// xterm theme, terminal construction and the small timing/encoding helpers.
+// xterm theme, terminal construction and the small timing helpers.
 // The socket + Edrys message wiring lives in app.js.
 
 import { Terminal } from '@xterm/xterm'
@@ -30,28 +30,6 @@ export const TERMINAL_THEME = {
   brightMagenta: '#bb9af7',
   brightCyan: '#0db9d7',
   brightWhite: '#c0caf5',
-}
-
-export function toUtf8(text) {
-  var surrogate = encodeURIComponent(text)
-  var result = ''
-  for (var i = 0; i < surrogate.length; ) {
-    var character = surrogate[i]
-    i += 1
-    if (character == '%') {
-      var hex = surrogate.substring(i, (i += 2))
-      if (hex) {
-        result += String.fromCharCode(parseInt(hex, 16))
-      }
-    } else {
-      result += character
-    }
-  }
-  return result
-}
-
-export function generateSessionId() {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2)
 }
 
 export function debounce(func, wait_ms) {

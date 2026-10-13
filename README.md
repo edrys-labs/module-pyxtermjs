@@ -3,60 +3,107 @@
 This module runs a full terminal within [edrys-Lite](https://github.com/edrys-labs/edrys-Lite), an open remote teaching platform.
 It is based on [pyxterm.js](https://github.com/cs01/pyxtermjs) by Chad Smith.
 
-![screenshot](./pyxtermjs.gif)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./screenshots/station-dark.png">
+  <img alt="The module on a station: status, who may type, the terminal server, the script for code from other modules, and the shared terminal" src="./screenshots/station-light.png">
+</picture>
 
 ## Usage
 
-To use this URL to add the module to your class:
+Add the module to your class with this URL:
 
 ```bash
 https://edrys-labs.github.io/module-pyxtermjs/index.html
 ```
 
-additionally you will have to clone this project and start the [pyxterm.js](https://github.com/cs01/pyxtermjs) terminal server:
+Open it on a **station** (`show-in: station`): the station's browser connects to a
+terminal server on the station's computer and shares the terminal with everyone in the station's room. Any current
+browser works; the page itself needs no Web Serial or other device access, the server does that.
+
+Then start the terminal server on the station's computer, either with Docker (see [Docker](#docker)) or from a
+clone of this project:
 
 ```bash
 pip install -r requirements.txt
-python3 -m pyxtermjs --cors True
+python3 -m pyxtermjs
 ```
 
-To secure the usage, you can also start a docker-container, which is used as a secure environment or, as it is shown below, you can run and restrict the command-line access via [firejail](https://firejail.wordpress.com/documentation-2/basic-usage/).
-The `--private-home` is not necessarily required, it simply copies my zsh configuration to the firejail home folder.
+To restrict what the shell can do, run it in a container (see [Docker](#docker)) or, as below, through
+[firejail](https://firejail.wordpress.com/documentation-2/basic-usage/). The `--private-home` option is optional;
+it copies your zsh configuration (paths relative to your home) into the firejail home folder.
 
 ``` bash
-python3 -m pyxtermjs --cors True --tmp True --command firejail --cmd-args='--noroot --private --quiet --cpu=1 --nice=19 --hostname=host --net=none --no3d --nosound --rlimit-cpu=1 --allow-debuggers --shell=/bin/zsh --private-home=/home/andre/.zshrc --private-home=/home/andre/.oh-my-zsh'
+python3 -m pyxtermjs --tmp --command firejail --cmd-args='--noroot --private --quiet --cpu=1 --nice=19 --hostname=host --net=none --no3d --nosound --rlimit-cpu=1 --allow-debuggers --shell=/bin/zsh --private-home=.zshrc,.oh-my-zsh'
 ```
 
-You may optionally specify any of the following station-only settings:
+## Configuration
+
+All settings are station settings (`stationConfig`):
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `server` | `http://localhost:5000/pty` | the terminal server the station connects to |
+| `execute` | `execute` | the message subject on which the station takes code from other modules |
+| `workflow` | none | a built-in toolchain that fills in `script`, `board`, `port`, `baud` and `filename`: `arduino-avr`, `arduino-esp32`, `arduino-nano-esp32`, `arduino-stm32`, `avr-gcc`, `micropython`, `native` |
+| `board` | from the workflow | `$BOARD`, e.g. an FQBN such as `arduino:avr:uno` |
+| `port` | from the workflow | `$PORT`, e.g. `/dev/ttyACM0` |
+| `baud` | from the workflow | `$BAUD`, e.g. `9600` |
+| `filename` | from the workflow | `$FILE`, and the main file of a multi-file project |
+| `script` | `echo $CODE \| base64 --decode` | typed into the shell for every piece of code; overrides the workflow's script |
+| `enable` | none ticked | `student` / `teacher`: who may type and run code (see below) |
 
 ``` json
 { "server": "http://localhost:5000/pty"
 , "execute": "execute"
-, "script": "echo $CODE | base64 --decode"
-, "enable": {
-  "teacher": true,
-  "student": true
-  }
+, "workflow": "arduino-avr"
+, "port": "/dev/ttyACM0"
+, "enable": { "teacher": true, "student": false }
 }
 ```
 
-the `server` contains the default terminal-server, and via execute it is possible to define a subject on which this module will listen for code to be executed. The following view is only visible on station-mode.
-Whenever another module sends some code/commands via the predefined "execute"-topic, the script on top will be executed, whereby `$CODE` will be substituted with the code passed from another module.
+Placeholders in the script, filled in for every run:
+
+- `$CODE`: the code, base64-encoded (decode it with `echo $CODE | base64 --decode`)
+- `$FILE`, `$BOARD`, `$PORT`, `$BAUD`: the settings above
+- `$FILES`: commands that write the other files of a multi-file project into the current directory (`true` when
+  there are none). If the script has no `$FILES`, those files are written before the script runs.
+
+Before each run the station sends two ctrl+c, to stop whatever was still running.
 
 A module can also send a multi-file project, as module-editor's multi-file mode does:
 `{"file": {"Sketch.ino": "...", "util.h": "..."}}` (as JSON text or as an object). The main file becomes `$CODE`:
-the one named like the `filename` setting, else the first with the same extension, else the first. The other
-files are written by `$FILES` (the arduino workflows put them into the sketch folder), or, if the script has no
-`$FILES`, into the current directory before the script runs. File names must be plain names (letters, digits,
-`_`, `.`, `-`; no paths, no leading dot). Other files are skipped with a warning in the console.
+the one named like the `filename` setting, else the first with the same extension, else the first. File names
+must be plain names (letters, digits, `_`, `.`, `-`; no paths, no leading dot). Other files are skipped with a
+warning in the console.
 
 By default students and teachers cannot use the terminal, they will see only the output: they can neither type
 into it nor run code from an editor module, because that code runs on the station's computer too.
 You will have to grant access via the `enable` checkboxes (`student`, `teacher`), which are only visible on the station.
 Code from modules on the station itself always runs.
 
-![station-control](./pyxterm.png)
+A student in the station's room sees the same terminal, at the station's size, without the controls:
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./screenshots/student-dark.png">
+  <img alt="The same terminal as a student sees it, without the station's controls" src="./screenshots/student-light.png">
+</picture>
+
+## Messages
+
+All subjects but `join` end in the `execute` setting (`<x>`, by default `execute`), so several terminals can
+share a room.
+
+| Subject | From → to | Body |
+|---|---|---|
+| `<x>` | any module → station | code as a string, or a project `{"file": {name: content}}` |
+| `input_<role>_<x>` | student / teacher → station | keystrokes; typed only if `enable` allows the sender's role in the class |
+| `join` | peer → station | asks for the status and the screen |
+| `connect_<x>` | station → room or one peer | `{ connected, enable, size: { cols, rows } }` |
+| `pty-screen_<x>` | station → a joining peer | the whole screen, as terminal output |
+| `pty-output_<x>` | station → room | terminal output as it arrives |
+
+The terminal size is the station's: students show the station's columns and rows, and scroll if their frame is
+smaller.
 
 ## API
 
@@ -262,3 +309,7 @@ You can try out the following classroom/lab configuration for sharing a terminal
 `https://raw.githubusercontent.com/edrys-labs/module-pyxtermjs/master/laboratory.yaml`
 
 see the configuration [here](./laboratory.yaml).
+
+## License
+
+[MIT](LICENSE) © edrys-labs, based on [pyxterm.js](https://github.com/cs01/pyxtermjs) © Chad Smith

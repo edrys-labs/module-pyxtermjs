@@ -14,13 +14,13 @@ import {
   resolveScript,
 } from './workflows.js'
 
+import { fillScript, parseUpload } from './execute.js'
+
 import {
   createTerminal,
   debounce,
-  generateSessionId,
   registerClearHandler,
   throttle,
-  toUtf8,
 } from './terminal.js'
 
 var terminal = null
@@ -31,10 +31,6 @@ var serialize = null
 // rows of scrollback the station replays to a peer that joins
 const JOIN_SCROLLBACK = 500
 
-// Add session management
-var sessionId = null
-var isProcessingInput = false
-var inputQueue = []
 var messageHandlersRegistered = false
 // station: the unreachable server was reported in the terminal
 var unreachableNoticed = false
@@ -46,6 +42,25 @@ var typingNoticed = false
 var stationSize = null
 
 const STATION_OFFLINE = 'The station is not connected to its terminal server.'
+
+// The message subjects. All but `join` carry the station's `execute` setting,
+// so several terminals can share a room.
+function subjects() {
+  const execute = window.Edrys?.module?.stationConfig?.execute || 'execute'
+  return {
+    execute,
+    output: 'pty-output_' + execute,
+    screen: 'pty-screen_' + execute,
+    connect: 'connect_' + execute,
+    input: (role) => 'input_' + role + '_' + execute,
+  }
+}
+
+// Send to the room, or to one peer. Opened outside Edrys, with edrys.js not
+// loaded, there is no one to send to.
+function send(subject, body, to) {
+  if (window.Edrys) Edrys.sendMessage(subject, body, to)
+}
 
 // A line from the module itself, not from the shell.
 function notice(text) {
@@ -77,10 +92,7 @@ function applyStationSize(size) {
 // Station only: type into the shell of the connected terminal-server.
 function writeToShell(input) {
   if (socket && socket.connected && typeof input === 'string') {
-    socket.emit('pty-input', {
-      input: input,
-      sessionId: sessionId,
-    })
+    socket.emit('pty-input', { input })
   }
 }
 
@@ -90,64 +102,11 @@ function senderRole(from) {
   return Edrys.liveClass?.users?.[from]?.role
 }
 
-// An execute body is code, or a project as module-editor's multi-file mode
-// sends it: {"file": {"Sketch.ino": "...", "util.h": "..."}}, as JSON text or
-// as an object. The main file is the one named like the `filename` field, else
-// the first with its extension, else the first; it becomes $CODE. Returns
-// { code, files } or null.
-function parseUpload(body, filename) {
-  let project = body
-  if (typeof body === 'string') {
-    try {
-      project = JSON.parse(body)
-    } catch (e) {
-      return { code: body, files: {} }
-    }
-  }
-
-  const files = project?.file
-  if (!files || typeof files !== 'object' || Array.isArray(files)) {
-    return typeof body === 'string' ? { code: body, files: {} } : null
-  }
-
-  const names = Object.keys(files)
-  const dot = filename.lastIndexOf('.')
-  const ext = dot > 0 ? filename.slice(dot) : null
-  const main = names.includes(filename)
-    ? filename
-    : names.find((name) => ext && name.endsWith(ext)) ?? names[0]
-  if (main === undefined) return null
-
-  const { [main]: code, ...rest } = files
-  return { code: String(code), files: rest }
-}
-
-// Plain file names only: no paths, no dotfiles, nothing the shell parses.
-const SAFE_NAME = /^\w[\w.-]*$/
-
-const shellQuote = (s) => "'" + s.replace(/'/g, "'\\''") + "'"
-
-// The shell commands that write the files, as one line for $FILES.
-function fileCommands(files) {
-  const commands = []
-  for (const [name, content] of Object.entries(files)) {
-    if (!SAFE_NAME.test(name)) {
-      console.warn('pyxtermjs: skipped a file with an unsafe name:', name)
-      continue
-    }
-    commands.push(
-      `echo ${btoa(toUtf8(String(content)))} | base64 --decode > ${shellQuote(name)}`
-    )
-  }
-  return commands.join(' && ') || 'true'
-}
-
 const app = createApp({
   data() {
     return {
       status: null,
       isStation: false,
-      connected: false,
       enable: {
         student: false,
         teacher: false,
@@ -173,10 +132,8 @@ const app = createApp({
     // Station: tell the room (or one peer) the status, who may type, and the
     // terminal size.
     announce(to) {
-      if (typeof Edrys === 'undefined') return
-      const executeCmd = Edrys.module?.stationConfig?.execute || 'execute'
-      Edrys.sendMessage(
-        'connect_' + executeCmd,
+      send(
+        subjects().connect,
         {
           connected: this.status,
           enable: { ...this.enable },
@@ -191,8 +148,6 @@ const app = createApp({
         socket.removeAllListeners()
         socket.close()
       }
-      // Reset session
-      sessionId = generateSessionId()
       // only the socket: the Edrys listeners from connectStation() stay, a
       // second registration would handle every message twice
       this.openSocket()
@@ -200,28 +155,7 @@ const app = createApp({
 
     // files: the other files of a multi-file project, written by $FILES
     execute(code, files = {}) {
-      let program = this.script
-
-      if (!program.endsWith('\n')) {
-        program += '\n'
-      }
-
-      const writes = fileCommands(files)
-      if (!program.includes('$FILES') && writes !== 'true') {
-        program = writes + '\n' + program
-      }
-
-      // replaceAll, not replace - templates use a placeholder more than
-      // once (e.g. $FILE in scaffold + compile), and the single-shot
-      // replace would only ever fill in the first occurrence. $FILES goes
-      // first, since $FILE is a prefix of it.
-      program = program
-        .replaceAll('$FILES', writes)
-        .replaceAll('$BOARD', this.board)
-        .replaceAll('$PORT', this.port)
-        .replaceAll('$BAUD', this.baud)
-        .replaceAll('$FILE', this.filename)
-        .replaceAll('$CODE', btoa(toUtf8(code)))
+      const program = fillScript(this.script, this, code, files)
 
       // two ctrl+c first, to stop a possible execution. One write: a ctrl+c
       // makes the terminal drop all input the shell has not read yet.
@@ -232,8 +166,6 @@ const app = createApp({
       if (terminal) {
         terminal.dispose()
       }
-
-      sessionId = generateSessionId()
 
       terminal = createTerminal()
       // e2e tests read the buffer
@@ -261,17 +193,8 @@ const app = createApp({
       terminal.writeln('Copy: ctrl+shift+c   Paste: ctrl+shift+v')
       terminal.writeln('')
 
-      // Improved throttling with deduplication
-      const tx = throttle((data) => {
-        if (typeof Edrys !== 'undefined' && !isProcessingInput) {
-          isProcessingInput = true
-          const executeCmd = Edrys.module?.stationConfig?.execute || 'execute'
-          Edrys.sendMessage('input_' + Edrys.role + '_' + executeCmd, data)
-          setTimeout(() => {
-            isProcessingInput = false
-          }, 50)
-        }
-      }, 50)
+      // keystrokes typed within 50 ms go to the station as one message
+      const tx = throttle((data) => send(subjects().input(Edrys.role), data), 50)
 
       // the station drops input it does not allow; say so once instead of
       // letting the keys vanish
@@ -285,11 +208,8 @@ const app = createApp({
 
       terminal.onData((data) => {
         if (socket && socket.connected) {
-          socket.emit('pty-input', {
-            input: data,
-            sessionId: sessionId,
-          })
-        } else if (typeof Edrys !== 'undefined') {
+          socket.emit('pty-input', { input: data })
+        } else if (window.Edrys) {
           toStation(data)
         }
       })
@@ -333,18 +253,17 @@ const app = createApp({
 
       const self = this
 
-      if (typeof Edrys !== 'undefined') {
-        Edrys.onMessage(({ from, subject, body }) => {
-          // Prevent processing own messages
-          if (from === Edrys.liveUser?.name) return
+      Edrys.onMessage(({ from, subject, body }) => {
+          // the sender gets its own messages too
+          if (from === Edrys.username) return
 
-          const executeCmd = Edrys.module?.stationConfig?.execute || 'execute'
+          const subject_ = subjects()
 
-          if (subject === 'pty-output_' + executeCmd) {
+          if (subject === subject_.output) {
             if (terminal && typeof body === 'string') {
               terminal.write(body)
             }
-          } else if (subject === 'pty-screen_' + executeCmd) {
+          } else if (subject === subject_.screen) {
             // the station's whole screen, sent when we joined, after the
             // status and size; the reset wipes the status notice, so repeat it
             if (terminal && typeof body === 'string') {
@@ -352,7 +271,7 @@ const app = createApp({
               terminal.write(body)
               if (self.status === false) notice(STATION_OFFLINE)
             }
-          } else if (subject === 'connect_' + executeCmd) {
+          } else if (subject === subject_.connect) {
             // { connected, enable, size }; older stations send the status alone
             const announced = body !== null && typeof body === 'object'
             const connected = announced ? body.connected : body
@@ -368,7 +287,6 @@ const app = createApp({
             else fitToScreen()
           }
         })
-      }
     },
 
     // Connect to the terminal-server. Called again by reload().
@@ -401,25 +319,19 @@ const app = createApp({
       socket.on('pty-output', function (data) {
         if (terminal && data.output) {
           terminal.write(data.output)
-          if (typeof Edrys !== 'undefined') {
-            const executeCmd = Edrys.module?.stationConfig?.execute || 'execute'
-            Edrys.sendMessage('pty-output_' + executeCmd, data.output)
-          }
+          send(subjects().output, data.output)
         }
       })
 
       socket.on('connect', () => {
-        console.log('Socket connected with session:', sessionId)
+        console.log('Socket connected')
         fitToScreen()
         self.status = true
         unreachableNoticed = false
         self.announce()
 
         // Send initial enter to receive outputs
-        socket.emit('pty-input', {
-          input: '\n',
-          sessionId: sessionId,
-        })
+        socket.emit('pty-input', { input: '\n' })
       })
 
       socket.on('disconnect', () => {
@@ -438,73 +350,54 @@ const app = createApp({
 
       this.openSocket()
 
-      if (typeof Edrys !== 'undefined') {
-        Edrys.onMessage(({ from, subject, body }) => {
-          switch (subject) {
-            default: {
-              const executeCmd =
-                Edrys.module?.stationConfig?.execute || 'execute'
-              if (
-                subject === 'input_teacher_' + executeCmd ||
-                subject === 'input_student_' + executeCmd
-              ) {
-                const role = senderRole(from)
-                if (
-                  (role === 'teacher' && self.enable.teacher) ||
-                  (role === 'student' && self.enable.student)
-                ) {
-                  writeToShell(body)
-                }
-              }
-              break
-            }
-            case 'join': {
-              if (typeof Edrys !== 'undefined') {
-                const executeCmd =
-                  Edrys.module?.stationConfig?.execute || 'execute'
-                // the status and size first, so the screen lands in a
-                // terminal of the right size; then the screen, not only the
-                // last output chunk
-                self.announce(from)
-                if (serialize) {
-                  Edrys.sendMessage(
-                    'pty-screen_' + executeCmd,
-                    serialize.serialize({ scrollback: JOIN_SCROLLBACK }),
-                    from,
-                  )
-                }
-              }
-              break
-            }
+      // opened outside Edrys: only the socket
+      if (!window.Edrys) return
+
+      Edrys.onMessage(({ from, subject, body }) => {
+        const subject_ = subjects()
+
+        if (subject === subject_.input('teacher') || subject === subject_.input('student')) {
+          // the role from the class, not from the subject the sender chose
+          const role = senderRole(from)
+          if (
+            (role === 'teacher' && self.enable.teacher) ||
+            (role === 'student' && self.enable.student)
+          ) {
+            writeToShell(body)
           }
-        })
-
-        const promiscuous = true
-
-        Edrys.onMessage(({ from, subject, body, module }) => {
-          if (subject === (Edrys.module?.stationConfig?.execute || 'execute')) {
-            // code runs on the station's host, so it needs the same checkbox
-            // as typing; the station's own modules may always
-            const role = senderRole(from)
-            if (
-              role !== 'station' &&
-              !(role === 'teacher' && self.enable.teacher) &&
-              !(role === 'student' && self.enable.student)
-            ) {
-              console.warn(`pyxtermjs: ignored code from a ${role || 'unknown peer'}; enable it in the station settings`)
-              return
-            }
-
-            const upload = parseUpload(body, self.filename)
-
-            if (upload) {
-              self.execute(upload.code, upload.files)
-            } else {
-              console.warn('pyxtermjs: nothing to execute in', body)
-            }
+        } else if (subject === 'join') {
+          // the status and size first, so the screen lands in a terminal of
+          // the right size; then the screen, not only the last output chunk
+          self.announce(from)
+          if (serialize) {
+            send(subject_.screen, serialize.serialize({ scrollback: JOIN_SCROLLBACK }), from)
           }
-        }, promiscuous)
-      }
+        }
+      })
+
+      // promiscuous: `execute` comes from the station's other modules
+      Edrys.onMessage(({ from, subject, body }) => {
+        if (subject === subjects().execute) {
+          // code runs on the station's host, so it needs the same checkbox as
+          // typing; the station's own modules may always
+          const role = senderRole(from)
+          if (
+            role !== 'station' &&
+            !(role === 'teacher' && self.enable.teacher) &&
+            !(role === 'student' && self.enable.student)
+          ) {
+            console.warn(`pyxtermjs: ignored code from a ${role || 'unknown peer'}; enable it in the station settings`)
+            return
+          }
+
+          const upload = parseUpload(body, self.filename)
+          if (upload) {
+            self.execute(upload.code, upload.files)
+          } else {
+            console.warn('pyxtermjs: nothing to execute in', body)
+          }
+        }
+      }, true)
     },
   },
 }).mount('#app')
@@ -512,7 +405,7 @@ const app = createApp({
 app.initTerminal()
 
 // Initialize when Edrys is ready
-if (typeof Edrys !== 'undefined') {
+if (window.Edrys) {
   Edrys.onReady(() => {
     console.log('pyxtermjs is loaded!')
 
@@ -526,8 +419,8 @@ if (typeof Edrys !== 'undefined') {
       app.port = resolveField(stationConfig, 'port')
       app.baud = resolveField(stationConfig, 'baud')
       app.filename = resolveField(stationConfig, 'filename')
-      app.enable.student = Edrys.module?.stationConfig?.enable?.student || false
-      app.enable.teacher = Edrys.module?.stationConfig?.enable?.teacher || false
+      app.enable.student = stationConfig?.enable?.student || false
+      app.enable.teacher = stationConfig?.enable?.teacher || false
 
       app.connectStation()
       Edrys.sendMessage('join', null)

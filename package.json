@@ -7,8 +7,8 @@
     "build": "npx parcel build src/index.html --no-scope-hoist --dist-dir dist --public-url ./",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "edrys-labs",
+  "license": "MIT",
   "devDependencies": {
     "parcel": "^2.13.0"
   },
