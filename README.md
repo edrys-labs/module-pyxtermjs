@@ -42,6 +42,13 @@ You may optionally specify any of the following station-only settings:
 
 the `server` contains the default terminal-server, and via execute it is possible to define a subject on which this module will listen for code to be executed. The following view is only visible on station-mode.
 Whenever another module sends some code/commands via the predefined "execute"-topic, the script on top will be executed, whereby `$CODE` will be substituted with the code passed from another module.
+
+A module can also send a multi-file project, as module-editor's multi-file mode does:
+`{"file": {"Sketch.ino": "...", "util.h": "..."}}` (as JSON text or as an object). The main file becomes `$CODE`:
+the one named like the `filename` setting, else the first with the same extension, else the first. The other
+files are written by `$FILES` (the arduino workflows put them into the sketch folder), or, if the script has no
+`$FILES`, into the current directory before the script runs. File names must be plain names (letters, digits,
+`_`, `.`, `-`; no paths, no leading dot). Other files are skipped with a warning in the console.
 By default students and teachers cannot directly access the terminal, they will see only the output.
 You will have to grant access via the checkboxes, which are only visible on the station.
 

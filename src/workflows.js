@@ -6,6 +6,9 @@
 //   $CODE  base64 of the student's code   $FILE  target filename
 //   $BOARD board identifier (FQBN or MCU)
 //   $PORT  serial port                    $BAUD  baud rate
+//   $FILES commands writing the other files of a multi-file project into the
+//          current directory (`true` when there are none). Scripts without it
+//          get those files written before they run.
 export const WORKFLOWS = {
   'arduino-avr': {
     filename: 'Sketch.ino',
@@ -24,6 +27,7 @@ export const WORKFLOWS = {
       'SKETCH=$(basename $FILE .ino)',
       'rm -rf $SKETCH && arduino-cli sketch new $SKETCH',
       'echo $CODE | base64 --decode > $SKETCH/$SKETCH.ino',
+      '(cd $SKETCH && $FILES)',
       'arduino-cli compile -b $BOARD $SKETCH &&',
       '  arduino-cli upload -b $BOARD -p $PORT $SKETCH &&',
       '  arduino-cli monitor -p $PORT -c baudrate=$BAUD',
@@ -41,6 +45,7 @@ export const WORKFLOWS = {
       'SKETCH=$(basename $FILE .ino)',
       'rm -rf $SKETCH && arduino-cli sketch new $SKETCH',
       'echo $CODE | base64 --decode > $SKETCH/$SKETCH.ino',
+      '(cd $SKETCH && $FILES)',
       'arduino-cli compile -b $BOARD $SKETCH &&',
       '  arduino-cli upload -b $BOARD -p $PORT $SKETCH &&',
       '  arduino-cli monitor -p $PORT -c baudrate=$BAUD',
@@ -60,6 +65,7 @@ export const WORKFLOWS = {
       'SKETCH=$(basename $FILE .ino)',
       'rm -rf $SKETCH && arduino-cli sketch new $SKETCH',
       'echo $CODE | base64 --decode > $SKETCH/$SKETCH.ino',
+      '(cd $SKETCH && $FILES)',
       'arduino-cli compile -b $BOARD $SKETCH &&',
       '  arduino-cli upload -b $BOARD -p $PORT $SKETCH &&',
       '  arduino-cli monitor -p $PORT -c baudrate=$BAUD',
@@ -89,6 +95,7 @@ export const WORKFLOWS = {
       'SKETCH=$(basename $FILE .ino)',
       'rm -rf $SKETCH && arduino-cli sketch new $SKETCH',
       'echo $CODE | base64 --decode > $SKETCH/$SKETCH.ino',
+      '(cd $SKETCH && $FILES)',
       'arduino-cli compile -b $FQBN $SKETCH &&',
       '  arduino-cli upload -b $FQBN -p $PORT $SKETCH &&',
       '  arduino-cli monitor -p $PORT -c baudrate=$BAUD',

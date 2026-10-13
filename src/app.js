@@ -69,6 +69,58 @@ function senderRole(from) {
   return Edrys.liveClass?.users?.[from]?.role
 }
 
+// An execute body is code, or a project as module-editor's multi-file mode
+// sends it: {"file": {"Sketch.ino": "...", "util.h": "..."}}, as JSON text or
+// as an object. The main file is the one named like the `filename` field, else
+// the first with its extension, else the first; it becomes $CODE. Returns
+// { code, files } or null.
+function parseUpload(body, filename) {
+  let project = body
+  if (typeof body === 'string') {
+    try {
+      project = JSON.parse(body)
+    } catch (e) {
+      return { code: body, files: {} }
+    }
+  }
+
+  const files = project?.file
+  if (!files || typeof files !== 'object' || Array.isArray(files)) {
+    return typeof body === 'string' ? { code: body, files: {} } : null
+  }
+
+  const names = Object.keys(files)
+  const dot = filename.lastIndexOf('.')
+  const ext = dot > 0 ? filename.slice(dot) : null
+  const main = names.includes(filename)
+    ? filename
+    : names.find((name) => ext && name.endsWith(ext)) ?? names[0]
+  if (main === undefined) return null
+
+  const { [main]: code, ...rest } = files
+  return { code: String(code), files: rest }
+}
+
+// Plain file names only: no paths, no dotfiles, nothing the shell parses.
+const SAFE_NAME = /^\w[\w.-]*$/
+
+const shellQuote = (s) => "'" + s.replace(/'/g, "'\\''") + "'"
+
+// The shell commands that write the files, as one line for $FILES.
+function fileCommands(files) {
+  const commands = []
+  for (const [name, content] of Object.entries(files)) {
+    if (!SAFE_NAME.test(name)) {
+      console.warn('pyxtermjs: skipped a file with an unsafe name:', name)
+      continue
+    }
+    commands.push(
+      `echo ${btoa(toUtf8(String(content)))} | base64 --decode > ${shellQuote(name)}`
+    )
+  }
+  return commands.join(' && ') || 'true'
+}
+
 const app = createApp({
   data() {
     return {
@@ -100,43 +152,34 @@ const app = createApp({
       this.openSocket()
     },
 
-    execute(code) {
-      // add two time ctrl+c to stop a possible execution
-      let program = '\u0003\u0003\n' + this.script
+    // files: the other files of a multi-file project, written by $FILES
+    execute(code, files = {}) {
+      let program = this.script
 
       if (!program.endsWith('\n')) {
         program += '\n'
       }
 
+      const writes = fileCommands(files)
+      if (!program.includes('$FILES') && writes !== 'true') {
+        program = writes + '\n' + program
+      }
+
       // replaceAll, not replace - templates use a placeholder more than
       // once (e.g. $FILE in scaffold + compile), and the single-shot
-      // replace would only ever fill in the first occurrence.
+      // replace would only ever fill in the first occurrence. $FILES goes
+      // first, since $FILE is a prefix of it.
       program = program
+        .replaceAll('$FILES', writes)
         .replaceAll('$BOARD', this.board)
         .replaceAll('$PORT', this.port)
         .replaceAll('$BAUD', this.baud)
         .replaceAll('$FILE', this.filename)
         .replaceAll('$CODE', btoa(toUtf8(code)))
 
-      writeToShell(program)
-    },
-
-    store(file) {
-      let command = ''
-
-      for (const name in file) {
-        let content = file[name]
-
-        if (!content.endsWith('\n')) {
-          content += '\n'
-        }
-
-        command += `echo ${btoa(
-          toUtf8(content)
-        )} | base64 --decode > ${toUtf8(name)}\n`
-      }
-
-      writeToShell(command)
+      // two ctrl+c first, to stop a possible execution. One write: a ctrl+c
+      // makes the terminal drop all input the shell has not read yet.
+      writeToShell('\u0003\u0003\n' + program)
     },
 
     initTerminal() {
@@ -358,19 +401,13 @@ const app = createApp({
 
         Edrys.onMessage(({ from, subject, body, module }) => {
           if (subject === (Edrys.module?.stationConfig?.execute || 'execute')) {
-            try {
-              let data = body
+            const upload = parseUpload(body, self.filename)
 
-              if (data.file) {
-                self.store(data.file)
-                self.execute('')
-                return
-              }
-            } catch (e) {
-              console.warn('Error, could not execute command:', e.message)
+            if (upload) {
+              self.execute(upload.code, upload.files)
+            } else {
+              console.warn('pyxtermjs: nothing to execute in', body)
             }
-
-            self.execute(body)
           }
         }, promiscuous)
       }
