@@ -19,7 +19,7 @@ import tempfile
 
 logging.getLogger("werkzeug").setLevel(logging.ERROR)
 
-__version__ = "0.5.0.0"
+__version__ = "3.0.0"
 
 # no static folder: it was this package's directory, so /app.py served the source
 app = Flask(__name__, template_folder="../docs", static_folder=None)
