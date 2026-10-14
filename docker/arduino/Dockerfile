@@ -5,9 +5,10 @@ FROM edryslabs/module-pyxtermjs:base
 USER root
 
 # This is required to install serial-plotter.py and other dependencies
+# (plotext 6 changed its API, serial-plotter.py is written for 5.3)
 RUN DEBIAN_FRONTEND=noninteractive pip3 install \
-    plotext \
-    pyserial \
+    plotext==5.3.2 \
+    pyserial==3.5 \
     mpremote \
     platformio \
     pymcuprog
