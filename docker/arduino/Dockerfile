@@ -85,6 +85,7 @@ RUN arduino-cli lib install \
     "FastLED" \
     "Firmata" \
     "LiquidCrystal" \
+    "LiquidCrystal I2C" \
     "LiquidCrystal_PCF8574" \
     "NewPing" \
     "SD" \
