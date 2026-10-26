@@ -51,10 +51,13 @@ html > body {
   background-color: #6b6b6b;
 }
 
+/* wraps in a narrow frame instead of pushing the button out of it */
 .controls {
   margin-left: auto;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  max-width: 100%;
   gap: 0.75rem;
   font-size: small;
 }
@@ -71,6 +74,8 @@ html > body {
 .controls input[type='url'] {
   margin: 0;
   width: 15rem;
+  min-width: 0;
+  max-width: 100%;
   font-family: monospace;
   font-size: 0.95em;
 }

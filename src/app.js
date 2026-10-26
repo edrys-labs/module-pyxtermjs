@@ -79,14 +79,25 @@ function fitToScreen() {
   return terminal.cols !== cols || terminal.rows !== rows
 }
 
-// Student: show the station's screen at the station's size; scroll if the
-// frame is smaller. Sizes from a peer are capped.
+// Student: show the station's screen at the station's width; scroll if the
+// frame is narrower. A taller frame gets more rows, the extra ones hold
+// scrollback - except in the alternate buffer (vim, less, man), where the
+// program positions and scrolls by the station's rows. Sizes from a peer
+// are capped.
 function applyStationSize(size) {
   const cols = Math.min(Number(size?.cols), 500)
   const rows = Math.min(Number(size?.rows), 200)
   if (!terminal || !(Number.isInteger(cols) && cols > 0 && Number.isInteger(rows) && rows > 0)) return
   stationSize = { cols, rows }
-  if (terminal.cols !== cols || terminal.rows !== rows) terminal.resize(cols, rows)
+  fitStationSize()
+}
+
+function fitStationSize() {
+  if (!terminal || !stationSize) return
+  const { cols, rows } = stationSize
+  const fitted = terminal.buffer.active.type === 'alternate' ? 0 : fit?.proposeDimensions()?.rows || 0
+  const target = Math.max(rows, fitted)
+  if (terminal.cols !== cols || terminal.rows !== target) terminal.resize(cols, target)
 }
 
 // Station only: type into the shell of the connected terminal-server.
@@ -243,8 +254,12 @@ const app = createApp({
       new ResizeObserver(
         debounce(() => {
           if (fitToScreen() && this.isStation) this.announce()
+          fitStationSize()
         }, wait_ms)
       ).observe(document.getElementById('terminal'))
+
+      // student: back to the station's rows while a program owns the screen
+      terminal.buffer.onBufferChange(() => fitStationSize())
     },
 
     connectUser() {
