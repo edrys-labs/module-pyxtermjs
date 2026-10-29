@@ -112,7 +112,13 @@
 
     <div id="terminal"></div>
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.8.4/socket.io.min.js"></script>
+    <!-- integrity: this page runs on the origin of edrys, a changed CDN file
+         must not run here -->
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.8.4/socket.io.min.js"
+      integrity="sha384-fBrXvbDtHoeKWJ/hcA6M+YGueiDW+h45I7V6F2kD1S8bOkrF9rZYPLVkCR6BLR/1"
+      crossorigin="anonymous"
+    ></script>
 
     <!-- Module logic -->
     <script type="module" src="./app.js"></script>
