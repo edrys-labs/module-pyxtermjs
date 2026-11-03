@@ -17,9 +17,11 @@ import {
 import { fillScript, parseUpload } from './execute.js'
 
 import {
+  TERMINAL_FONT,
   createTerminal,
   debounce,
   registerClearHandler,
+  terminalTheme,
   throttle,
 } from './terminal.js'
 
@@ -418,6 +420,19 @@ const app = createApp({
 }).mount('#app')
 
 app.initTerminal()
+
+// the terminal stays dark, a shade darker in the classroom's dark theme
+window.Edrys?.onTheme?.(() => {
+  if (terminal) terminal.options.theme = terminalTheme()
+})
+// xterm measures its font once: again when the module font has loaded
+document.fonts?.load("13px 'JetBrains Mono Variable'").then(() => {
+  if (!terminal) return
+  terminal.options.fontFamily = TERMINAL_FONT
+  // the same as a resize of the frame: the station owns the size
+  if (fitToScreen() && app.isStation) app.announce()
+  fitStationSize()
+})
 
 // Initialize when Edrys is ready
 if (window.Edrys) {

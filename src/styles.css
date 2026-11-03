@@ -7,64 +7,21 @@ html > body {
   height: 100vh;
   max-width: 100%;
   margin: 0;
-  padding: 0.5rem 0.5rem 0;
-}
-
-#app {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem 1rem;
-  margin-bottom: 0.5rem;
-}
-
-.title {
-  font-size: 1.4em;
-  line-height: 1;
-}
-
-/* inherit: water.css has a light and a dark variant, a fixed grey would
-   be unreadable in one of them */
-.status {
-  font-size: small;
-  color: inherit;
-}
-.status > .label {
-  opacity: 0.7;
-}
-
-.status .badge {
-  display: inline-block;
-  padding: 0.1rem 0.5rem;
-  border-radius: 999px;
-  font-weight: bold;
-  color: #fff;
-}
-/* dark enough for white text to clear WCAG AA */
-.status .badge.on {
-  background-color: #1f7a45;
-}
-.status .badge.off {
-  background-color: #b8384a;
-}
-.status .badge.wait {
-  background-color: #6b6b6b;
+  padding: 0;
 }
 
 /* wraps in a narrow frame instead of pushing the button out of it */
 .controls {
-  margin-left: auto;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   max-width: 100%;
-  gap: 0.75rem;
-  font-size: small;
+  gap: 8px 12px;
 }
 .controls label {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 4px;
   margin: 0;
   white-space: nowrap;
 }
@@ -76,50 +33,50 @@ html > body {
   width: 15rem;
   min-width: 0;
   max-width: 100%;
-  font-family: monospace;
-  font-size: 0.95em;
+  font-family: var(--edrys-mono);
 }
 .controls button {
   margin: 0;
   white-space: nowrap;
 }
 
-/* must match TERMINAL_BACKGROUND in terminal.js, or the padding shows a seam */
+/* station only: the script that runs code sent with execute */
+#app textarea {
+  display: block;
+  box-sizing: border-box;
+  width: calc(100% - 24px);
+  height: 4.25rem;
+  margin: 10px 12px 0;
+  font: 400 12px/1.5 var(--edrys-mono);
+  resize: vertical;
+}
+
+/* the background is the xterm theme's (terminal.js), or the padding shows a seam */
 #terminal {
   flex: 1;
   min-height: 0;
+  margin: 10px 12px 12px;
   /* a student whose frame is smaller than the station's terminal scrolls */
   overflow: auto;
-  background: #1a1b26;
-  border-radius: 6px;
-  padding: 6px 0 6px 6px;
+  padding: 8px 0 8px 10px;
 }
 
-/* scoped to #terminal - the chrome outside keeps water.css */
+/* scoped to #terminal - the chrome outside has the module's scrollbars */
 #terminal ::-webkit-scrollbar {
   width: 10px;
 }
 #terminal ::-webkit-scrollbar-track {
-  background: #1a1b26;
+  background: var(--edrys-terminal);
 }
 #terminal ::-webkit-scrollbar-thumb {
-  background: #414868;
+  background: #4a525e;
   border-radius: 5px;
 }
 #terminal ::-webkit-scrollbar-thumb:hover {
-  background: #565f89;
+  background: #5c6470;
 }
 /* firefox */
 #terminal .xterm-viewport {
   scrollbar-width: thin;
-  scrollbar-color: #414868 #1a1b26;
-}
-
-#app textarea {
-  flex: 1 0 100%;
-  height: 4.25rem;
-  margin: 0;
-  font-family: monospace;
-  font-size: 0.95em;
-  resize: vertical;
+  scrollbar-color: #4a525e var(--edrys-terminal);
 }

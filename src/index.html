@@ -77,31 +77,36 @@
       href="https://edrys-labs.github.io/module/vendor/open-iconic/css/open-iconic.min.css"
     />
 
+    <link
+      rel="stylesheet"
+      href="https://edrys-labs.github.io/module/edrys-module.css"
+    />
+
     <!-- Edrys client API -->
     <script src="https://edrys-labs.github.io/module/edrys.js"></script>
   </head>
 
   <body>
     <div id="app">
-      <span class="title">pyxterm.js</span>
-      <span class="status">
-        <span class="label">status:</span>
-        <span v-if="status === false" class="badge off">disconnected</span>
-        <span v-if="status === null" class="badge wait">connecting ...</span>
-        <span v-if="status === true" class="badge on">connected</span>      </span>
+      <div class="edrys-toolbar">
+        <span v-if="status === false" class="edrys-pill error" role="status">disconnected</span>
+        <span v-if="status === null" class="edrys-pill warn" role="status">connecting ...</span>
+        <span v-if="status === true" class="edrys-pill ok" role="status">connected</span>
+        <span class="edrys-spacer"></span>
 
-      <span class="controls" v-if="isStation">
-        <label>
-          student: <input type="checkbox" v-model="enable.student" />
-        </label>
-        <label>
-          teacher: <input type="checkbox" v-model="enable.teacher" />
-        </label>
-        <input type="url" v-model="server" aria-label="terminal server" />
-        <button @click="reload()" title="reconnect to the terminal server">
-          <span class="oi" data-glyph="reload" aria-hidden="true"></span> reconnect
-        </button>
-      </span>
+        <span class="controls" v-if="isStation">
+          <label>
+            student: <input type="checkbox" v-model="enable.student" />
+          </label>
+          <label>
+            teacher: <input type="checkbox" v-model="enable.teacher" />
+          </label>
+          <input type="url" v-model="server" aria-label="terminal server" />
+          <button @click="reload()" title="reconnect to the terminal server">
+            <span class="oi" data-glyph="reload" aria-hidden="true"></span> reconnect
+          </button>
+        </span>
+      </div>
 
       <textarea
         v-model="script"
@@ -110,7 +115,7 @@
       ></textarea>
     </div>
 
-    <div id="terminal"></div>
+    <div id="terminal" class="edrys-terminal"></div>
     
     <!-- integrity: this page runs on the origin of edrys, a changed CDN file
          must not run here -->

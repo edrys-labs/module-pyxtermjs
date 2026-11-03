@@ -8,6 +8,9 @@ It is based on [pyxterm.js](https://github.com/cs01/pyxtermjs) by Chad Smith.
   <img alt="The module on a station: status, who may type, the terminal server, the script for code from other modules, and the shared terminal" src="./screenshots/station-light.png">
 </picture>
 
+The module follows the classroom's light or dark theme (the operating system's when opened on its own); the terminal
+stays dark in both.
+
 ## Usage
 
 Add the module to your class with this URL:

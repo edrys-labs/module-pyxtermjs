@@ -4,32 +4,36 @@
 import { Terminal } from '@xterm/xterm'
 import '@xterm/xterm/css/xterm.css'
 
-// Mirrored by the #terminal background in styles.css - if these drift, the
-// padding around the terminal shows a seam against the xterm canvas.
-export const TERMINAL_BACKGROUND = '#1a1b26'
-
-export const TERMINAL_THEME = {
-  background: TERMINAL_BACKGROUND,
-  foreground: '#c0caf5',
-  cursor: '#c0caf5',
-  cursorAccent: TERMINAL_BACKGROUND,
-  selectionBackground: '#33467c',
-  black: '#15161e',
-  red: '#f7768e',
-  green: '#9ece6a',
-  yellow: '#e0af68',
-  blue: '#7aa2f7',
-  magenta: '#bb9af7',
-  cyan: '#7dcfff',
-  white: '#a9b1d6',
-  brightBlack: '#414868',
-  brightRed: '#ff7a93',
-  brightGreen: '#b9f27c',
-  brightYellow: '#ff9e64',
-  brightBlue: '#7da6ff',
-  brightMagenta: '#bb9af7',
-  brightCyan: '#0db9d7',
-  brightWhite: '#c0caf5',
+// The terminal stays dark in both classroom themes. Its background is
+// --edrys-terminal from edrys-module.css (a shade darker in the dark theme),
+// which #terminal in styles.css uses too, so the padding shows no seam.
+export function terminalTheme() {
+  const css = getComputedStyle(document.documentElement)
+  const background = css.getPropertyValue('--edrys-terminal').trim() || '#1b2029'
+  const foreground = css.getPropertyValue('--edrys-on-terminal').trim() || '#e4e7eb'
+  return {
+    background,
+    foreground,
+    cursor: foreground,
+    cursorAccent: background,
+    selectionBackground: '#3a4a63',
+    black: '#15161e',
+    red: '#f7768e',
+    green: '#9ece6a',
+    yellow: '#e0af68',
+    blue: '#7aa2f7',
+    magenta: '#bb9af7',
+    cyan: '#7dcfff',
+    white: '#a9b1d6',
+    brightBlack: '#5c6470',
+    brightRed: '#ff7a93',
+    brightGreen: '#b9f27c',
+    brightYellow: '#ff9e64',
+    brightBlue: '#7da6ff',
+    brightMagenta: '#bb9af7',
+    brightCyan: '#0db9d7',
+    brightWhite: '#e4e7eb',
+  }
 }
 
 export function debounce(func, wait_ms) {
@@ -70,18 +74,22 @@ export function throttle(cb, delay = 100) {
   }
 }
 
+const FALLBACK_FONT = "'JetBrains Mono', 'Fira Code', 'Cascadia Mono', 'SF Mono', 'Menlo', 'Consolas', monospace"
+// edrys-module.css's font; xterm measures its font once, so it is only used
+// when loaded (app.js switches to it then)
+export const TERMINAL_FONT = `'JetBrains Mono Variable', ${FALLBACK_FONT}`
+
 export function createTerminal() {
   return new Terminal({
     cursorBlink: true,
     macOptionIsMeta: true,
     scrollback: 10000,
-    fontFamily:
-      "'JetBrains Mono', 'Fira Code', 'Cascadia Mono', 'SF Mono', 'Menlo', 'Consolas', monospace",
-    fontSize: 14,
+    fontFamily: document.fonts?.check("13px 'JetBrains Mono Variable'") ? TERMINAL_FONT : FALLBACK_FONT,
+    fontSize: 13,
     lineHeight: 1.3,
     cursorStyle: 'bar',
     cursorWidth: 2,
-    theme: TERMINAL_THEME,
+    theme: terminalTheme(),
   })
 }
 
