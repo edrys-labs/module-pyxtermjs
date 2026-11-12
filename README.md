@@ -52,7 +52,7 @@ All settings are station settings (`stationConfig`):
 |---|---|---|
 | `server` | `http://localhost:5000/pty` | the terminal server the station connects to |
 | `execute` | `execute` | the message subject on which the station takes code from other modules |
-| `workflow` | none | a built-in toolchain that fills in `script`, `board`, `port`, `baud` and `filename`: `arduino-avr`, `arduino-esp32`, `arduino-nano-esp32`, `arduino-stm32`, `avr-gcc`, `micropython`, `native` |
+| `workflow` | none | a built-in toolchain that fills in `script`, `board`, `port`, `baud` and `filename`: `arduino-avr`, `arduino-esp32`, `arduino-nano-esp32`, `arduino-stm32`, `avr-gcc`, `micropython`, `calliope-mini-v2` (Calliope mini 1.x/2.x), `native` |
 | `board` | from the workflow | `$BOARD`, e.g. an FQBN such as `arduino:avr:uno` |
 | `port` | from the workflow | `$PORT`, e.g. `/dev/ttyACM0` |
 | `baud` | from the workflow | `$BAUD`, e.g. `9600` |

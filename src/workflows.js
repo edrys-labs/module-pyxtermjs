@@ -136,6 +136,34 @@ export const WORKFLOWS = {
     ].join('\n'),
   },
 
+  // Calliope mini 1.x/2.x (nRF51822, SEGGER J-Link interface) with Calliope's
+  // MicroPython 1.9.2 port: student code imports `calliopemini`, as on the v3.
+  // `mpremote run` pastes the whole source into the 16 KB of RAM and fails
+  // with MemoryError on longer scripts, and `mpremote fs cp` needs os.stat,
+  // which this firmware lacks. So the file is written through the REPL in
+  // small chunks and imported, which compiles it from flash.
+  'calliope-mini-v2': {
+    filename: 'main.py',
+    board: '',
+    boards: [],
+    port: 'auto',
+    baud: 115200,
+    script: [
+      'echo $CODE | base64 --decode > $FILE',
+      "python3 -c '",
+      'import subprocess, sys',
+      'port, name = sys.argv[1:]',
+      'src = open(name, "rb").read()',
+      'args = ["mpremote", "connect", port, "exec", "f = open(%r, %r)" % (name, "wb")]',
+      'for i in range(0, len(src), 128):',
+      '    args += ["exec", "f.write(%r)" % src[i:i + 128]]',
+      'args += ["exec", "f.close()"]',
+      'sys.exit(subprocess.run(args).returncode)',
+      "' $PORT $FILE &&",
+      '  mpremote connect $PORT exec "import $(basename $FILE .py)"',
+    ].join('\n'),
+  },
+
   native: {
     filename: 'main.py',
     board: '',
