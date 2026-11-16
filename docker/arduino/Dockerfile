@@ -92,7 +92,16 @@ RUN arduino-cli lib install \
     "Servo" \
     "Stepper" \
     "TFT" \
-    "WiFi"
+    "WiFi" \
+    "ESP32Servo" \
+    "OneWire" \
+    "DallasTemperature" \
+    "Adafruit BME280 Library" \
+    "Adafruit BMP280 Library" \
+    "U8g2" \
+    "MFRC522" \
+    "TM1637" \
+    "Bounce2"
 
 
 USER root
