@@ -22,8 +22,20 @@ import serial
 
 NUMBER = re.compile(r"[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?")
 FIELD = re.compile(r"[,;\t]")
-FPS = 10
 COLORS = ["cyan+", "orange+", "magenta+", "green+", "yellow+", "red+"]
+GRID = 238  # dark gray (256 colors), below the labels' gray: rings and spokes stay behind the data
+
+# Every frame goes to the terminal, and in Edrys from the station to every student: each frame
+# replaces the whole screen in the alternate buffer (the shell's screen comes back on exit),
+# and synchronized output makes xterm.js wait for the end of a frame that arrives in pieces.
+ENTER = "\x1b[?1049h\x1b[?25l"
+LEAVE = "\x1b[?25h\x1b[?1049l"
+FRAME_START = "\x1b[?2026h\x1b[H"
+FRAME_END = "\x1b[J\x1b[?2026l"
+
+
+class PortError(Exception):
+    pass
 
 
 def parse_line(line):
@@ -104,10 +116,14 @@ class RadarPlot:
         radius = step * math.ceil(reach / step)
 
         # A terminal cell is about twice as tall as wide: pick the ranges so circles stay round.
+        # The 0° and 180° labels sit just outside the outer ring, centered: leave room for
+        # half a label (3 cells) beside them, out of the ~8 cells the axes take.
         span_y = radius * 1.08
         span_x = span_y * width / (2 * height)
-        if span_x < 2 * span_y:
-            span_x = 2 * span_y
+        cells = max(width - 8, 10)
+        need = max(2 * span_y, 2 * radius * 1.04 / (1 - 6 / cells))
+        if span_x < need:
+            span_x = need
             span_y = span_x * 2 * height / width
         plt.xlim(-span_x / 2, span_x / 2)
         plt.ylim(0, span_y)
@@ -119,11 +135,11 @@ class RadarPlot:
         half = [math.radians(a) for a in range(0, 181, 2)]
         for r in rings:
             plt.plot([r * math.cos(t) for t in half], [r * math.sin(t) for t in half],
-                     marker="braille", color="gray")
+                     marker="braille", color=GRID)
         for a in range(0, 181, 30):
             t = math.radians(a)
             plt.plot([0, radius * math.cos(t)], [0, radius * math.sin(t)],
-                     marker="braille", color="gray")
+                     marker="braille", color=GRID)
             plt.text(f"{a}°", radius * 1.04 * math.cos(t), radius * 1.04 * math.sin(t),
                      color="gray", alignment="center")
 
@@ -143,15 +159,15 @@ def nice_step(value):
     return next(power * m for m in (1, 2, 5, 10) if power * m >= value)
 
 
-def open_port(port, baud, wait):
+def open_port(port, baud, wait, timeout):
     """Open the port, retrying while it comes back after an upload or a reset."""
     deadline = time.monotonic() + wait
     while True:
         try:
-            return serial.Serial(port, baud, timeout=1 / FPS)
+            return serial.Serial(port, baud, timeout=timeout)
         except serial.SerialException as error:
             if time.monotonic() >= deadline:
-                sys.exit(f"serial-plotter: cannot open {port}: {error}")
+                raise PortError(f"serial-plotter: cannot open {port}: {error}") from None
             time.sleep(0.25)
 
 
@@ -159,38 +175,43 @@ def render(plot, title, size):
     cols, rows = size
     width, height = max(cols, 20), max(rows - 1, 8)
     plt.clf()
-    plt.theme("dark")
+    plt.theme("clear")  # the terminal's own background and text color
     plt.plotsize(width, height)
     plt.title(f"{title} · {plot.status()} · Ctrl+C to quit")
     plot.draw(width, height)
     frame = plt.build().replace("\n", "\x1b[K\n")
-    sys.stdout.write("\x1b[H" + frame + "\x1b[K\x1b[J")
+    sys.stdout.write(FRAME_START + frame + "\x1b[K" + FRAME_END)
     sys.stdout.flush()
 
 
-def monitor(port, baud, plot, wait):
-    ser = open_port(port, baud, wait)
+def monitor(port, baud, plot, wait, fps):
+    # open the port before taking the screen, so an error stays readable in the shell
+    ser = open_port(port, baud, wait, 1 / fps)
     title = f"{port} ({baud} baud)"
     buffer = b""
     drawn_at, dirty, size = 0.0, True, None
-    sys.stdout.write("\x1b[?25l\x1b[2J")
-    while True:
-        try:
-            buffer += ser.read(ser.in_waiting or 1)
-        except serial.SerialException:
-            ser.close()
-            ser = open_port(port, baud, wait)
-            continue
-        *lines, buffer = buffer.split(b"\n")
-        for line in lines:
-            dirty |= plot.add(parse_line(line.decode("utf-8", "replace")))
-        buffer = buffer[-4096:]
+    sys.stdout.write(ENTER)
+    try:
+        while True:
+            try:
+                buffer += ser.read(ser.in_waiting or 1)
+            except serial.SerialException:
+                ser.close()
+                ser = open_port(port, baud, wait, 1 / fps)
+                continue
+            *lines, buffer = buffer.split(b"\n")
+            for line in lines:
+                dirty |= plot.add(parse_line(line.decode("utf-8", "replace")))
+            buffer = buffer[-4096:]
 
-        now = time.monotonic()
-        current = os.get_terminal_size() if sys.stdout.isatty() else (100, 30)
-        if (dirty and now - drawn_at >= 1 / FPS) or current != size:
-            render(plot, title, current)
-            drawn_at, dirty, size = now, False, current
+            now = time.monotonic()
+            current = os.get_terminal_size() if sys.stdout.isatty() else (100, 30)
+            if (dirty and now - drawn_at >= 1 / fps) or current != size:
+                render(plot, title, current)
+                drawn_at, dirty, size = now, False, current
+    finally:
+        sys.stdout.write(LEAVE)
+        sys.stdout.flush()
 
 
 def main():
@@ -205,18 +226,22 @@ def main():
                         help="samples kept per series in the line plot (default: %(default)s)")
     parser.add_argument("-w", "--wait", type=float, default=10,
                         help="seconds to keep retrying while the port is missing (default: %(default)s)")
+    parser.add_argument("-f", "--fps", type=float, default=5,
+                        help="frames per second at most; in Edrys every frame goes to every "
+                             "student (default: %(default)s)")
     args = parser.parse_args()
+    if not 0 < args.fps <= 30:
+        parser.error("--fps must be between 0 and 30")
 
     plot = RadarPlot() if args.type == "radar" else LinePlot(args.max_len)
     signal.signal(signal.SIGINT, signal.default_int_handler)  # also when started with SIGINT ignored
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
     try:
-        monitor(args.port, args.baud, plot, args.wait)
+        monitor(args.port, args.baud, plot, args.wait, args.fps)
     except KeyboardInterrupt:
         pass
-    finally:
-        sys.stdout.write("\x1b[?25h\n")
-        sys.stdout.flush()
+    except PortError as error:
+        sys.exit(str(error))  # after monitor() gave the screen back
 
 
 if __name__ == "__main__":
